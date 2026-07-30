@@ -655,7 +655,7 @@ footer span { color: #fff; font-weight: 600; }
       <div class="card" onclick="openPage('feedback')">
         <div class="card-top">
           <div class="card-icon">📋</div>
-          <div class="card-badge">Instant · No Key Needed</div>
+          <div class="card-badge">Demo · Pending API Key Connection</div>
         </div>
         <div class="card-body">
           <div class="card-title">Assignment Feedback</div>
@@ -819,7 +819,11 @@ footer span { color: #fff; font-weight: 600; }
   </div>
   <div class="pv-body">
     <div style="background:rgba(201,168,76,0.12);border:1.5px solid rgba(201,168,76,0.4);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12.5px;color:var(--muted);line-height:1.5;">
-      🔒 <b style="color:var(--navy);">Runs entirely in this file.</b> No external AI API or key required — feedback is generated instantly by logic built directly into this page, so it works the same for every user with no setup and no cost.
+      🔒 <b style="color:var(--navy);">This is currently running on a built-in knowledge base.</b>
+      <ul style="margin:8px 0 0 18px;padding:0;">
+        <li>For more precise, customised feedback, this can be connected to a Claude API key for seamless feedback across multiple queries, any domain, and content complexities.</li>
+        <li>Alternatively, it can be linked directly to our organisation's <b style="color:var(--navy);">LMS knowledge base</b>, so every answer and rubric is drawn from our own course content.</li>
+      </ul>
     </div>
     <!-- CAPTURE SCREEN -->
     <div id="f-capture" class="capture-screen">
@@ -913,7 +917,12 @@ footer span { color: #fff; font-weight: 600; }
   </div>
   <div class="pv-body">
     <div style="background:rgba(201,168,76,0.12);border:1.5px solid rgba(201,168,76,0.4);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12.5px;color:var(--muted);line-height:1.5;">
-      🔗 <b style="color:var(--navy);">This is a working demo using sample data.</b> To go live, this needs to be connected to the <b style="color:var(--navy);">Microsoft Teams workflow bot</b> — once connected, clicking "Send Reminder" below will trigger the bot to automatically post the reminder into the learner's cohort communication channel, instead of just previewing it here. That integration is owned by another team and is pending; the flow below shows exactly what will be sent once it's wired up.
+      🔗 <b style="color:var(--navy);">This is a working demo using sample data.</b>
+      <ul style="margin:8px 0 0 18px;padding:0;">
+        <li>To go live, this needs to be connected to the <b style="color:var(--navy);">Microsoft Teams workflow bot</b>.</li>
+        <li>Once connected, clicking "Send Reminder" below will trigger the bot to automatically post the reminder into the learner's individual Teams chat.</li>
+        <li>The flow here shows just a preview of how it will work.</li>
+      </ul>
     </div>
 
     <!-- STEP 1: LOOKUP -->
@@ -929,7 +938,7 @@ footer span { color: #fff; font-weight: 600; }
         <div class="dl-list-title" id="r-list-title">Upcoming Assignments</div>
         <div id="r-dl-rows"></div>
       </div>
-      <button class="sub-btn" style="margin-top:14px;" onclick="sendReminder()">Send Reminder to Communication Channel →</button>
+      <button class="sub-btn" style="margin-top:14px;" onclick="sendReminder()">Send Reminder to Learner →</button>
       <button class="dl-btn" style="display:flex;justify-content:center;margin-top:10px;" onclick="resetReminderLookup()">← Look up a different learner</button>
     </div>
 
@@ -1696,7 +1705,7 @@ function sendReminder() {
   if (!currentReminderPlan) return;
   document.getElementById('r-review').style.opacity = '0.5';
   document.getElementById('r-review').style.pointerEvents = 'none';
-  document.getElementById('r-success-txt').textContent = '✅ Preview ready for ' + currentReminderPlan.name + ' (' + currentReminderPlan.cohort + '). Once connected to the Teams workflow bot, this will post automatically into the cohort\'s communication channel.';
+  document.getElementById('r-success-txt').textContent = '✅ Preview ready for ' + currentReminderPlan.name + ' (' + currentReminderPlan.cohort + '). Once connected to the Teams workflow bot, this will post automatically into the learner\'s individual Teams chat.';
   document.getElementById('r-success').style.display = 'flex';
 }
 
