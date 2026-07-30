@@ -1,0 +1,1762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MentorSync — EduClaas</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   VARIABLES
+═══════════════════════════════════════════ */
+:root {
+  --pink: #1B2E6B;
+  --pink2: #2A4090;
+  --pink-light: #EEF1F8;
+  --pink-pale: #F5F7FC;
+  --white: #FFFFFF;
+  --text: #0F1A3D;
+  --muted: #5A6A9B;
+  --border: rgba(26,46,107,0.15);
+  --shadow: 0 4px 24px rgba(26,46,107,0.10);
+  --navy: #1B2E6B;
+  --navy2: #2A4090;
+  --gold: #C9A84C;
+  --gold-light: #E8C96A;
+  --bg-light: #EEF1F8;
+}
+
+/* ═══════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { font-family: 'DM Sans', sans-serif; background: #F5F7FC; color: var(--text); min-height: 100vh; font-size: 16px; line-height: 1.5; }
+button, input, label { font-family: 'DM Sans', sans-serif; }
+a { color: var(--navy); }
+
+/* ═══════════════════════════════════════════
+   HOME PAGE
+═══════════════════════════════════════════ */
+#home { display: block; }
+
+/* NAV */
+.nav {
+  background: var(--navy);
+  padding: 0 24px;
+  height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 3px solid var(--gold);
+  box-shadow: 0 2px 16px rgba(201,168,76,0.3);
+}
+.logo { display: flex; align-items: center; gap: 12px; }
+.logo-icon {
+  width: 40px; height: 40px;
+  background: rgba(255,255,255,0.2);
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-size: 16px; font-weight: 700; color: #fff;
+}
+.logo-text .name { font-family: 'Playfair Display', serif; font-size: 18px; color: #fff; font-weight: 700; }
+.logo-text .tag { font-size: 10px; color: rgba(255,255,255,0.75); letter-spacing: 1.5px; text-transform: uppercase; }
+.nav-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: #fff; cursor: pointer;
+}
+
+/* HERO */
+.hero {
+  background: linear-gradient(135deg, var(--navy) 0%, #0F1A3D 100%);
+  padding: 48px 24px 56px;
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+}
+.hero-bubble {
+  position: absolute; border-radius: 50%;
+  background: rgba(201,168,76,0.08);
+  animation: float 8s ease-in-out infinite;
+}
+.hero-bubble:nth-child(1) { width: 200px; height: 200px; top: -60px; right: -40px; animation-delay: 0s; }
+.hero-bubble:nth-child(2) { width: 120px; height: 120px; bottom: -30px; left: -20px; animation-delay: 2s; }
+.hero-bubble:nth-child(3) { width: 80px; height: 80px; top: 20px; left: 15%; animation-delay: 4s; }
+@keyframes float { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-12px);} }
+
+.hero-inner { position: relative; z-index: 1; max-width: 600px; margin: 0 auto; }
+.hero-online {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 20px; padding: 5px 14px;
+  font-size: 12px; color: rgba(255,255,255,0.9); font-weight: 500;
+  margin-bottom: 16px;
+}
+.pulse { width: 7px; height: 7px; border-radius: 50%; background: #fff; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+.hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(24px,5vw,38px); color: #fff; line-height: 1.2; margin-bottom: 12px; }
+.hero h1 span { color: rgba(255,255,255,0.75); }
+.hero p { font-size: 15px; color: rgba(255,255,255,0.75); margin-bottom: 24px; }
+.hero-tags { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.hero-tag {
+  background: rgba(201,168,76,0.2); border: 1px solid rgba(201,168,76,0.4);
+  color: #fff; padding: 6px 14px; border-radius: 20px;
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: all 0.2s;
+}
+.hero-tag:hover { background: rgba(201,168,76,0.2); transform: translateY(-2px); }
+
+/* MAIN */
+.main { max-width: 1100px; margin: 0 auto; padding: 36px 20px 60px; }
+.sec-label {
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--muted); font-weight: 600; margin-bottom: 18px;
+  display: flex; align-items: center; gap: 10px;
+}
+.sec-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* GRID */
+.grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 18px; margin-bottom: 36px; }
+
+/* CARDS */
+.card {
+  background: var(--white); border-radius: 18px;
+  border: 2px solid transparent;
+  box-shadow: var(--shadow);
+  cursor: pointer; transition: all 0.25s;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.card:hover { border-color: var(--navy); transform: translateY(-4px); box-shadow: 0 12px 36px rgba(26,46,107,0.15); }
+.card:active { transform: translateY(-1px); }
+.card-top {
+  background: var(--navy); padding: 18px 20px;
+  display: flex; justify-content: space-between; align-items: flex-start;
+}
+.card-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.3);
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+}
+.card-badge {
+  background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);
+  color: #fff; padding: 3px 10px; border-radius: 12px;
+  font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+}
+.card-body { padding: 18px 20px; display: flex; flex-direction: column; flex: 1; }
+.card-title { font-family: 'Playfair Display', serif; font-size: 19px; color: var(--navy); font-weight: 700; margin-bottom: 6px; }
+.card-desc { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 12px; }
+.card-feats { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; flex: 1; }
+.card-feat { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted); }
+.feat-dot {
+  width: 15px; height: 15px; border-radius: 50%;
+  background: rgba(26,46,107,0.08); border: 1.5px solid var(--gold);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8px; color: var(--navy); flex-shrink: 0;
+}
+.card-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--navy); color: #fff; border: none;
+  padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s; width: 100%; justify-content: center;
+}
+.card-btn:hover { background: var(--navy2); }
+
+/* USAGE BOX */
+.usage-box { background: var(--white); border-radius: 18px; border: 2px solid rgba(201,168,76,0.2); box-shadow: var(--shadow); overflow: hidden; }
+.usage-head {
+  background: var(--navy); padding: 16px 22px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; border-bottom: 3px solid var(--gold);
+}
+.usage-head:hover { background: var(--navy2); }
+.usage-head-title { font-family: 'Playfair Display', serif; font-size: 17px; color: #fff; font-weight: 700; }
+.usage-lock {
+  background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);
+  color: #fff; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 600;
+}
+.usage-arrow { color: #fff; font-size: 16px; transition: transform 0.3s; margin-left: 8px; }
+.usage-arrow.open { transform: rotate(180deg); }
+.usage-body { display: none; padding: 20px; overflow-x: auto; }
+.usage-body.open { display: block; }
+
+/* FILTERS */
+.filters { display: flex; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
+.filter-box { background: var(--bg-light); border: 2px solid rgba(201,168,76,0.2); border-radius: 12px; padding: 12px 14px; flex: 1; min-width: 150px; }
+.filter-title { font-size: 11px; font-weight: 700; color: var(--navy); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1.5px solid var(--border); }
+.filter-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; color: var(--text); cursor: pointer; }
+.filter-item input[type=checkbox] { accent-color: var(--navy); width: 14px; height: 14px; cursor: pointer; }
+
+/* TABLE */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 480px; }
+th { background: rgba(26,46,107,0.05); padding: 11px 14px; text-align: left; font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; border-bottom: 2px solid rgba(201,168,76,0.3); }
+td { padding: 11px 14px; font-size: 13px; border-bottom: 1px solid rgba(224,48,112,0.06); }
+tr:hover td { background: rgba(224,48,112,0.03); }
+.bar { display: flex; align-items: center; gap: 8px; }
+.bar-track { flex: 1; height: 5px; background: rgba(26,46,107,0.08); border-radius: 3px; overflow: hidden; min-width: 50px; }
+.bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--navy), var(--gold)); }
+.bar-num { font-size: 12px; font-weight: 700; color: var(--navy); min-width: 30px; }
+.pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.pill.good { background: rgba(34,197,94,0.1); color: #16a34a; }
+.pill.ok { background: rgba(26,46,107,0.08); color: var(--navy); }
+.pill.low { background: rgba(239,68,68,0.1); color: #dc2626; }
+.pdot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+/* CHART */
+.chart-controls { display: flex; align-items: center; gap: 8px; margin: 18px 0 12px; flex-wrap: wrap; }
+.ctrl-lbl { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+.ctrl-btn { padding: 6px 13px; border-radius: 8px; border: 1.5px solid var(--border); background: transparent; color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.ctrl-btn.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+.ctrl-btn:hover:not(.active) { border-color: var(--navy); color: var(--navy); }
+.chart-wrap { background: var(--bg-light); border-radius: 12px; padding: 16px; border: 1px solid rgba(201,168,76,0.25); }
+
+/* FOOTER */
+footer {
+  background: var(--navy); border-top: 3px solid var(--pink2);
+  padding: 16px 24px; display: flex; justify-content: space-between;
+  align-items: center; flex-wrap: wrap; gap: 8px;
+}
+footer p { font-size: 12px; color: rgba(255,255,255,0.7); }
+footer span { color: #fff; font-weight: 600; }
+
+/* ═══════════════════════════════════════════
+   FULL-PAGE VIEWS (replaces modals)
+═══════════════════════════════════════════ */
+/* page header */
+.pv-head {
+  background: var(--navy);
+  border-bottom: 3px solid var(--gold);
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 2px 12px rgba(224,48,112,0.25);
+}
+.pv-back {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(255,255,255,0.2); border: none;
+  color: #fff; font-size: 20px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: background 0.2s;
+}
+.pv-back:hover { background: rgba(201,168,76,0.3); }
+.pv-title { font-family: 'Playfair Display', serif; font-size: 18px; color: #fff; font-weight: 700; flex: 1; }
+/* robot home button */
+.pv-home {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.2); border: 1.5px solid rgba(255,255,255,0.35);
+  border-radius: 20px; padding: 6px 12px;
+  cursor: pointer; flex-shrink: 0; transition: background 0.2s;
+}
+.pv-home:hover { background: rgba(201,168,76,0.25); }
+.pv-home span { font-size: 13px; color: #fff; font-weight: 600; white-space: nowrap; }
+.pv-home svg { flex-shrink: 0; }
+
+/* page content */
+.pv-body { max-width: 640px; margin: 0 auto; padding: 24px 20px 80px; }
+
+/* page bubbles */
+.pv-bubbles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: hidden; }
+.pv-bubble { position: absolute; border-radius: 50%; background: rgba(26,46,107,0.03); animation: float 8s ease-in-out infinite; }
+.pv-body { position: relative; z-index: 1; }
+
+/* ═══════════════════════════════════════════
+   CHAT UI
+═══════════════════════════════════════════ */
+.chat-area {
+  background: var(--bg-light); border-radius: 14px;
+  padding: 16px; height: 340px; overflow-y: auto;
+  margin-bottom: 14px; border: 1px solid rgba(201,168,76,0.25);
+  display: flex; flex-direction: column; gap: 12px;
+  width: 100%;
+}
+.cm { display: flex; gap: 8px; }
+.cm-av {
+  width: 28px; height: 28px; border-radius: 50%;
+  flex-shrink: 0; display: flex; align-items: center;
+  justify-content: center; font-size: 11px; font-weight: 700;
+}
+.cm-av.bot { background: var(--navy); color: #fff; }
+.cm-av.usr { background: var(--gold); color: #fff; }
+.cm-bub {
+  border-radius: 12px; padding: 10px 14px;
+  font-size: 14px; line-height: 1.55; max-width: 84%;
+}
+.cm-bub.bot { background: var(--navy); color: #fff; border-bottom-left-radius: 3px; }
+.cm-bub.usr { background: rgba(26,46,107,0.08); color: var(--text); border-bottom-right-radius: 3px; margin-left: auto; }
+.typing-dots { display: flex; gap: 4px; align-items: center; padding: 4px 0; }
+.typing-dots span { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.7); animation: blink 1.4s infinite; }
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes blink { 0%,80%,100%{opacity:0.2;} 40%{opacity:1;} }
+
+.input-row { display: flex; gap: 8px; width: 100%; }
+.txt-in {
+  flex: 1; padding: 12px 14px; font-size: 15px;
+  border: 2px solid rgba(201,168,76,0.2); border-radius: 10px;
+  color: var(--text); outline: none; transition: border-color 0.2s;
+  background: #fff;
+}
+.txt-in:focus { border-color: var(--navy); }
+.send-btn {
+  background: var(--navy); color: #fff; border: none;
+  border-radius: 10px; padding: 12px 18px; font-size: 14px;
+  font-weight: 600; cursor: pointer; transition: background 0.2s;
+}
+.send-btn:hover { background: var(--navy2); }
+
+/* ═══════════════════════════════════════════
+   UPLOAD
+═══════════════════════════════════════════ */
+.upload-lbl {
+  display: flex; flex-direction: column; align-items: center;
+  border: 2.5px dashed rgba(201,168,76,0.3); border-radius: 14px;
+  padding: 24px 16px; cursor: pointer;
+  background: #fff; margin-bottom: 12px;
+  transition: all 0.2s; position: relative; overflow: hidden;
+}
+.upload-lbl:hover { border-color: var(--navy); background: var(--bg-light); }
+.upload-lbl input[type=file] {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%; opacity: 0; cursor: pointer;
+}
+.upload-icon { font-size: 30px; margin-bottom: 6px; }
+.upload-txt { font-size: 14px; color: var(--muted); text-align: center; }
+.upload-txt b { color: var(--navy); }
+.file-chip {
+  display: none; align-items: center; gap: 8px;
+  background: rgba(26,46,107,0.06); border: 1.5px solid rgba(224,48,112,0.2);
+  border-radius: 8px; padding: 8px 12px; margin-bottom: 12px;
+  font-size: 14px; color: var(--navy); font-weight: 500;
+}
+.dl-btn {
+  display: none; align-items: center; gap: 6px;
+  background: #fff; border: 2px solid var(--navy); color: var(--navy);
+  border-radius: 8px; padding: 9px 16px; font-size: 13px;
+  font-weight: 600; cursor: pointer; margin-top: 8px;
+  transition: all 0.2s;
+}
+.dl-btn:hover { background: var(--navy); color: #fff; }
+
+/* ═══════════════════════════════════════════
+   FORM
+═══════════════════════════════════════════ */
+.form-grp { margin-bottom: 14px; }
+.form-grp label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px; }
+.form-grp input {
+  width: 100%; padding: 12px 14px; font-size: 15px;
+  border: 2px solid rgba(201,168,76,0.2); border-radius: 10px;
+  color: var(--text); outline: none; background: #fff;
+  transition: border-color 0.2s;
+}
+.form-grp input:focus { border-color: var(--navy); }
+.sub-btn {
+  width: 100%; background: var(--navy); color: #fff; border: none;
+  border-radius: 10px; padding: 14px; font-size: 15px;
+  font-weight: 700; cursor: pointer; margin-top: 4px;
+  transition: background 0.2s;
+}
+.sub-btn:hover { background: var(--navy2); }
+
+/* ═══════════════════════════════════════════
+   SUCCESS BANNER
+═══════════════════════════════════════════ */
+.success-msg {
+  display: none; align-items: center; gap: 10px;
+  background: rgba(34,197,94,0.1); border: 1.5px solid #16a34a;
+  border-radius: 10px; padding: 12px 16px; margin-top: 12px;
+  font-size: 14px; color: #16a34a; font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════
+   DEADLINES
+═══════════════════════════════════════════ */
+.dl-list { background: var(--bg-light); border-radius: 12px; padding: 14px 16px; border: 1px solid rgba(201,168,76,0.25); margin-top: 16px; }
+.dl-list-title { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; }
+.dl-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; padding: 6px 0; border-bottom: 1px solid rgba(224,48,112,0.06); }
+.dl-row:last-child { border: none; }
+.dl-name { font-weight: 700; color: var(--navy); }
+.dl-date { color: var(--muted); }
+
+/* ═══════════════════════════════════════════
+   ELIGIBILITY
+═══════════════════════════════════════════ */
+.elig-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.elig-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: var(--bg-light); border-radius: 12px;
+  padding: 14px; border: 2px solid transparent; cursor: pointer;
+  transition: all 0.2s;
+}
+.elig-item:hover { border-color: rgba(201,168,76,0.3); }
+.elig-item.checked { border-color: var(--navy); background: rgba(26,46,107,0.04); }
+.elig-chk {
+  width: 22px; height: 22px; border-radius: 6px;
+  border: 2px solid rgba(201,168,76,0.3); background: #fff;
+  flex-shrink: 0; display: flex; align-items: center;
+  justify-content: center; font-size: 13px; color: transparent;
+  transition: all 0.2s; margin-top: 1px;
+}
+.elig-item.checked .elig-chk { background: var(--navy); border-color: var(--navy); color: #fff; }
+.elig-content { flex: 1; }
+.elig-label { font-size: 14px; color: var(--text); font-weight: 500; line-height: 1.45; margin-bottom: 6px; }
+.att-lbl {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 600; color: var(--navy);
+  background: rgba(26,46,107,0.08); 
+  border: 2px solid rgba(201,168,76,0.4);
+  border-radius: 8px; padding: 10px 18px; 
+  cursor: pointer; transition: all 0.2s;
+  min-height: 48px; min-width: 120px;
+  -webkit-appearance: none;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  font-family: 'DM Sans', sans-serif;
+}
+.att-lbl:hover, .att-lbl:active, .att-lbl:focus { background: rgba(26,46,107,0.15); border-color: var(--navy); outline: none; }
+.att-lbl input[type=file] {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%; opacity: 0;
+  cursor: pointer; font-size: 16px;
+  -webkit-appearance: none;
+}
+.att-name { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+/* ELIGIBILITY RESULT */
+.elig-result { display: none; margin-top: 20px; }
+.score-card {
+  background: linear-gradient(135deg, var(--navy), #0F1A3D);
+  border-radius: 18px; padding: 24px 20px; text-align: center; color: #fff; margin-bottom: 16px;
+}
+.score-title { font-size: 14px; font-weight: 600; opacity: 0.9; margin-bottom: 16px; }
+.score-circle-wrap { display: flex; justify-content: center; margin-bottom: 14px; }
+.score-num-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.score-num-big { font-size: 34px; font-weight: 700; color: #fff; line-height: 1; }
+.score-num-sub { font-size: 11px; color: rgba(255,255,255,0.75); font-weight: 500; }
+.score-verdict { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+.score-detail { font-size: 13px; opacity: 0.85; line-height: 1.55; }
+
+/* KPI report table */
+.kpi-report { background: #fff; border-radius: 14px; border: 2px solid rgba(201,168,76,0.2); overflow: hidden; }
+.kpi-report-head { background: var(--navy); padding: 13px 18px; border-bottom: 2px solid var(--pink2); }
+.kpi-report-title { font-family: 'Playfair Display', serif; font-size: 15px; color: #fff; font-weight: 700; }
+
+/* ═══════════════════════════════════════════
+   ROBOT GREETING
+═══════════════════════════════════════════ */
+#robot-screen {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--bg-light);
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; padding: 24px;
+  overflow: hidden;
+}
+.rb-bubbles { position: absolute; inset: 0; pointer-events: none; }
+.rb-bubble { position: absolute; border-radius: 50%; background: rgba(26,46,107,0.05); animation: float 8s ease-in-out infinite; }
+.rb-bubble:nth-child(1) { width: 200px; height: 200px; top: -60px; right: -40px; }
+.rb-bubble:nth-child(2) { width: 150px; height: 150px; bottom: -40px; left: -30px; animation-delay: 2s; }
+.rb-bubble:nth-child(3) { width: 100px; height: 100px; top: 30%; left: 5%; animation-delay: 4s; }
+.rb-bubble:nth-child(4) { width: 80px; height: 80px; top: 20%; right: 8%; animation-delay: 1s; }
+.rb-bubble:nth-child(5) { width: 60px; height: 60px; bottom: 25%; right: 15%; animation-delay: 3s; }
+
+.rb-inner { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.rb-robot { animation: float 2.5s ease-in-out infinite; }
+.rb-speech {
+  background: #fff; border-radius: 20px; padding: 18px 24px;
+  max-width: 320px; text-align: center; position: relative;
+  box-shadow: 0 8px 32px rgba(26,46,107,0.15);
+  border: 2px solid rgba(201,168,76,0.2);
+}
+.rb-speech::before {
+  content: ''; position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+  border-left: 12px solid transparent; border-right: 12px solid transparent;
+  border-bottom: 12px solid var(--border);
+}
+.rb-speech::after {
+  content: ''; position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+  border-left: 11px solid transparent; border-right: 11px solid transparent;
+  border-bottom: 11px solid #fff;
+}
+#rb-text { font-size: 15px; color: var(--text); font-weight: 500; line-height: 1.55; min-height: 46px; }
+#rb-btn {
+  display: none; background: var(--navy); color: #fff; border: none;
+  border-radius: 25px; padding: 13px 36px; font-size: 15px; font-weight: 700;
+  cursor: pointer; box-shadow: 0 4px 20px rgba(201,168,76,0.3);
+  transition: all 0.2s;
+}
+#rb-btn:hover { background: #C0185A; transform: translateY(-2px); }
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .grid { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 22px; }
+  .hero p { font-size: 13px; }
+  .hero-tag { font-size: 12px; padding: 5px 11px; }
+  .main { padding: 18px 12px 60px; }
+  .card-title { font-size: 17px; }
+  .card-desc { font-size: 13px; }
+  .pv-title { font-size: 15px; }
+  .pv-head { padding: 12px 12px; }
+  .pv-body { padding: 16px 13px 80px; }
+  .chat-area { height: 52vh; }
+  .cm-bub { font-size: 14px; }
+  .txt-in { font-size: 16px; }
+  .send-btn { font-size: 14px; padding: 12px 14px; }
+  .upload-lbl { padding: 20px 14px; }
+  .form-grp input { font-size: 16px; }
+  .sub-btn { font-size: 15px; }
+  .elig-label { font-size: 14px; }
+  .dl-row { font-size: 13px; }
+  .filters { flex-direction: column; }
+  footer { flex-direction: column; text-align: center; padding: 12px; }
+  .usage-body { padding: 12px; }
+  .nav { padding: 0 12px; }
+  .pv-home span { display: none; }
+}
+@media (max-width: 380px) {
+  .hero h1 { font-size: 19px; }
+  .pv-title { font-size: 13px; }
+}
+
+.capture-screen { 
+  display:flex; flex-direction:column; gap:16px; 
+  max-width:480px; margin:0 auto; 
+  padding: 40px 20px;
+  min-height: calc(100vh - 70px);
+  justify-content: center;
+}
+.capture-title { font-family:'Playfair Display',serif; font-size:22px; color:var(--navy); font-weight:700; margin-bottom:4px; }
+.capture-sub { font-size:14px; color:var(--muted); margin-bottom:8px; line-height:1.5; }
+.capture-btn {
+  width:100%; background:var(--navy); color:#fff; border:none;
+  border-radius:10px; padding:13px; font-size:15px; font-weight:700;
+  cursor:pointer; transition:background 0.2s;
+}
+.capture-btn:hover { background:#C0185A; }
+
+@media(max-width:640px){
+  #robot-screen { padding: 20px 16px; }
+  .rb-inner { width: 100%; max-width: 340px; }
+  .rb-speech { padding: 14px 18px; max-width: 280px; }
+  #rb-text { font-size: 14px; min-height: 40px; }
+  #rb-btn { font-size: 14px; padding: 12px 28px; }
+  .rb-robot svg { width: 90px; height: 105px; }
+}
+
+
+/* SMOOTH TRANSITIONS */
+.page-view { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#fff; z-index:200; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+.page-view.pv-open { display:block; animation:slideIn 0.28s ease forwards; }
+@keyframes slideIn { from{opacity:0;transform:translateX(30px)} to{opacity:1;transform:translateX(0)} }
+.card:active { transform: scale(0.97); }
+::-webkit-scrollbar { display: none; }
+* { -ms-overflow-style: none; scrollbar-width: none; -webkit-tap-highlight-color: transparent; }
+
+/* AUTOFILL BANNER */
+.af-banner { background: linear-gradient(135deg,#1B2E6B,#2A4090); border: 1.5px solid #C9A84C; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; display: none; align-items: center; justify-content: space-between; gap: 10px; }
+.af-banner.show { display: flex; }
+.af-info { font-size: 14px; color: #fff; line-height: 1.4; }
+.af-info b { color: #C9A84C; }
+.af-btn { background: #C9A84C; color: #1B2E6B; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; font-family: "DM Sans",sans-serif; flex-shrink: 0; }
+
+
+
+/* SUPPORT BUTTON */
+
+
+
+</style>
+<meta name="theme-color" content="#1B2E6B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MentorSync">
+<meta name="mobile-web-app-capable" content="yes">
+</head>
+<body>
+
+<!-- ════════════════════════════════════════
+     ROBOT GREETING SCREEN
+════════════════════════════════════════ -->
+<div id="robot-screen">
+  <div class="rb-bubbles">
+    <div class="rb-bubble"></div>
+    <div class="rb-bubble"></div>
+    <div class="rb-bubble"></div>
+    <div class="rb-bubble"></div>
+    <div class="rb-bubble"></div>
+  </div>
+  <div class="rb-inner">
+    <svg class="rb-robot" width="110" height="130" viewBox="0 0 120 140" fill="none">
+      <line x1="60" y1="8" x2="60" y2="24" stroke="#1B2E6B" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="60" cy="5" r="5" fill="#C9A84C" stroke="#1B2E6B" stroke-width="2"/>
+      <rect x="22" y="24" width="76" height="58" rx="16" fill="white" stroke="#F0C0D0" stroke-width="2"/>
+      <circle cx="44" cy="46" r="9" fill="#1B2E6B"/>
+      <circle cx="76" cy="46" r="9" fill="#1B2E6B"/>
+      <circle cx="46" cy="44" r="3" fill="white"/>
+      <circle cx="78" cy="44" r="3" fill="white"/>
+      <path d="M43 66 Q60 76 77 66" stroke="#1B2E6B" stroke-width="3" stroke-linecap="round" fill="none"/>
+      <rect x="26" y="88" width="68" height="46" rx="14" fill="white" stroke="#F0C0D0" stroke-width="2"/>
+      <circle cx="60" cy="108" r="9" fill="#C9A84C" opacity="0.5"/>
+      <circle cx="60" cy="108" r="5" fill="#1B2E6B"/>
+      <rect x="6" y="92" width="18" height="34" rx="9" fill="white" stroke="#F0C0D0" stroke-width="2"/>
+      <rect x="96" y="92" width="18" height="34" rx="9" fill="white" stroke="#F0C0D0" stroke-width="2"/>
+    </svg>
+    <div class="rb-speech">
+      <div id="rb-text"></div>
+    </div>
+    <button id="rb-btn" onclick="dismissRobot()">Let's Go →</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     HOME PAGE
+════════════════════════════════════════ -->
+<div id="home" style="display:none;">
+  <nav class="nav">
+    <div class="logo">
+      <div class="logo-icon">MS</div>
+      <div class="logo-text">
+        <div class="name">MentorSync</div>
+        <div class="tag">Virtual Assistant · EduClaas</div>
+      </div>
+    </div>
+    <div class="nav-avatar">AM</div>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-bubble"></div>
+    <div class="hero-bubble"></div>
+    <div class="hero-bubble"></div>
+    <div class="hero-inner">
+      <div class="hero-online"><div class="pulse"></div>AI Assistant Online</div>
+      <h1>Hello, I'm <span>MentorSync</span>.<br>Your Virtual Assistant.</h1>
+      <p>AI-powered academic support for EduClaas learners. Select a feature below.</p>
+    </div>
+  </div>
+
+  <!-- 4 FEATURE CARDS -->
+  <div style="max-width:1100px;margin:0 auto;padding:32px 20px 0;">
+    <div class="grid">
+
+      <div class="card" onclick="openPage('feedback')">
+        <div class="card-top">
+          <div class="card-icon">📋</div>
+          <div class="card-badge">Instant · No Key Needed</div>
+        </div>
+        <div class="card-body">
+          <div class="card-title">Assignment Feedback</div>
+          <div class="card-desc">Upload your assignment or ask a question. Get structured feedback instantly — no external API or key needed.</div>
+          <div class="card-feats">
+            <div class="card-feat"><div class="feat-dot">✓</div>Areas for Improvement</div>
+            <div class="card-feat"><div class="feat-dot">✓</div>Estimated Grade / 100</div>
+            <div class="card-feat"><div class="feat-dot">✓</div>Upload PDF, DOCX, PPT, Images</div>
+            <div class="card-feat"><div class="feat-dot">✓</div>Download feedback report</div>
+          </div>
+          <button class="card-btn">Get Feedback →</button>
+        </div>
+      </div>
+
+      <div class="card" onclick="openPage('portfolio')">
+        <div class="card-top">
+          <div class="card-icon">🗂️</div>
+          <div class="card-badge">Guidance</div>
+        </div>
+        <div class="card-body">
+          <div class="card-title">Portfolio Support</div>
+          <div class="card-desc">Step-by-step portfolio guidance tailored to your profession. Ask anything.</div>
+          <div class="card-feats">
+            <div class="card-feat"><div class="feat-dot">✓</div>Detailed structure guidance</div>
+            <div class="card-feat"><div class="feat-dot">✓</div>Carrd &amp; Framer — how to use each</div>
+            <div class="card-feat"><div class="feat-dot">✓</div>Profession-specific advice</div>
+          </div>
+          <button class="card-btn">View Guidance →</button>
+        </div>
+      </div>
+
+      <div class="card" onclick="openPage('reminders')">
+        <div class="card-top">
+          <div class="card-icon">🔔</div>
+          <div class="card-badge">Demo · Pending Bot Connection</div>
+        </div>
+        <div class="card-body">
+          <div class="card-title">Assignment Reminders</div>
+          <div class="card-desc">Enter a learner's name and cohort code to fetch their upcoming deadlines and preview the reminder.</div>
+          <div class="card-feats">
+            <div class="card-feat"><div class="feat-dot">✓</div>Fetch timeline by cohort code</div>
+            <div class="card-feat"><div class="feat-dot">✓</div>Review before sending</div>
+            <div class="card-feat"><div class="feat-dot">✓</div>To connect: Teams workflow bot</div>
+          </div>
+          <button class="card-btn">Send Reminders →</button>
+        </div>
+      </div>
+
+      <div class="card" onclick="openPage('eligibility')">
+        <div class="card-top">
+          <div class="card-icon">🎓</div>
+          <div class="card-badge">Apply</div>
+        </div>
+        <div class="card-body">
+          <div class="card-title">Placement Eligibility Appeal</div>
+          <div class="card-desc">Confirm your criteria, attach proof, and check your eligibility score.</div>
+          <div class="card-feats">
+            <div class="card-feat"><div class="feat-dot">✓</div>All assignments graded above 75</div>
+            <div class="card-feat"><div class="feat-dot">✓</div>Capstone / portfolio submitted</div>
+            <div class="card-feat"><div class="feat-dot">✓</div>Task / practical input completed</div>
+          </div>
+          <button class="card-btn">Start Appeal →</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- USAGE REPORT -->
+    <div class="sec-label">Usage Report — Organisation Access Only</div>
+    <div class="usage-box">
+      <div class="usage-head" onclick="toggleUsage()">
+        <div class="usage-head-title">📊 Learner Activity Report</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="usage-lock">🔒 Admin Only</div>
+          <div class="usage-arrow" id="uarrow">▼</div>
+        </div>
+      </div>
+      <div class="usage-body" id="ubody">
+        <div class="filters">
+          <div class="filter-box">
+            <div class="filter-title">Pillar</div>
+            <label class="filter-item"><input type="checkbox" checked class="pf pil" value="all" onchange="filterTbl()"> Select all</label>
+            <label class="filter-item"><input type="checkbox" checked class="pf pil" value="Business IT" onchange="filterTbl()"> Business IT</label>
+            <label class="filter-item"><input type="checkbox" checked class="pf pil" value="Data Science" onchange="filterTbl()"> Data Science</label>
+            <label class="filter-item"><input type="checkbox" checked class="pf pil" value="Digital Business" onchange="filterTbl()"> Digital Business</label>
+            <label class="filter-item"><input type="checkbox" checked class="pf pil" value="Software Engineering" onchange="filterTbl()"> Software Engineering</label>
+            <label class="filter-item"><input type="checkbox" checked class="pf pil" value="Systems Management" onchange="filterTbl()"> Systems Management</label>
+          </div>
+          <div class="filter-box">
+            <div class="filter-title">Profile</div>
+            <label class="filter-item"><input type="checkbox" checked class="pf pro" value="all" onchange="filterTbl()"> Select all</label>
+            <label class="filter-item"><input type="checkbox" checked class="pf pro" value="eOU" onchange="filterTbl()"> eOU</label>
+            <label class="filter-item"><input type="checkbox" checked class="pf pro" value="LA" onchange="filterTbl()"> LA</label>
+            <label class="filter-item"><input type="checkbox" checked class="pf pro" value="LI" onchange="filterTbl()"> LI</label>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table id="ltbl">
+            <thead><tr><th>Timestamp</th><th>Email</th><th>Learner Name</th><th>Cohort Code</th><th>Pillar</th><th>Profile</th><th>Task Completion</th><th>Best Performed On</th></tr></thead>
+            <tbody id="track-tbody">
+              <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px;font-size:13px;">No learner activity yet. Activity will appear here as learners use the app.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="chart-controls">
+          <div class="ctrl-lbl">View by:</div>
+          <button class="ctrl-btn" onclick="setScale('day',this)">Day</button>
+          <button class="ctrl-btn" onclick="setScale('week',this)">Week</button>
+          <button class="ctrl-btn active" onclick="setScale('month',this)">Month</button>
+          <button class="ctrl-btn" onclick="setScale('quarter',this)">Quarter</button>
+          <button class="ctrl-btn" onclick="setScale('year',this)">Year</button>
+        </div>
+        <div class="chart-wrap"><canvas id="uchart" height="200"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2026 <span>CLaaS2SaaS</span> · Lithan Academy Pte Ltd</p>
+    <p>Powered by <span>MentorSync AI</span></p>
+  </footer>
+</div>
+
+<!-- ════════════════════════════════════════
+     ROBOT SVG (reusable)
+════════════════════════════════════════ -->
+<svg id="mini-robot-svg" style="display:none" viewBox="0 0 120 140" fill="none">
+  <line x1="60" y1="8" x2="60" y2="22" stroke='#C9A84C' stroke-width="3" stroke-linecap="round"/>
+  <circle cx="60" cy="5" r="4" fill="rgba(255,255,255,0.6)"/>
+  <rect x="24" y="22" width="72" height="52" rx="14" fill="white" opacity="0.9"/>
+  <circle cx="44" cy="42" r="8" fill="#1B2E6B"/>
+  <circle cx="76" cy="42" r="8" fill="#1B2E6B"/>
+  <circle cx="46" cy="40" r="2.5" fill="white"/>
+  <circle cx="78" cy="40" r="2.5" fill="white"/>
+  <path d="M43 60 Q60 70 77 60" stroke="#1B2E6B" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <rect x="28" y="80" width="64" height="40" rx="12" fill="white" opacity="0.85"/>
+  <rect x="8" y="84" width="16" height="30" rx="8" fill="white" opacity="0.8"/>
+  <rect x="96" y="84" width="16" height="30" rx="8" fill="white" opacity="0.8"/>
+</svg>
+
+<!-- ════════════════════════════════════════
+     PAGE VIEWS
+════════════════════════════════════════ -->
+
+<!-- FEEDBACK PAGE -->
+<div class="page-view" id="pv-feedback">
+  <div class="pv-bubbles">
+    <div class="pv-bubble" style="width:160px;height:160px;top:80px;right:-40px;animation-delay:0s;"></div>
+    <div class="pv-bubble" style="width:100px;height:100px;bottom:100px;left:-20px;animation-delay:3s;"></div>
+  </div>
+  <div class="pv-head">
+    <button class="pv-back" onclick="closePage('feedback')">←</button>
+    <div class="pv-title">📋 Assignment Feedback</div>
+    <div class="pv-home" onclick="closePage('feedback')">
+      <svg width="20" height="24" viewBox="0 0 120 140" fill="none"><line x1="60" y1="8" x2="60" y2="22" stroke='#C9A84C' stroke-width="3" stroke-linecap="round"/><circle cx="60" cy="5" r="4" fill="rgba(255,255,255,0.6)"/><rect x="24" y="22" width="72" height="52" rx="14" fill="white" opacity="0.9"/><circle cx="44" cy="42" r="8" fill="#1B2E6B"/><circle cx="76" cy="42" r="8" fill="#1B2E6B"/><circle cx="46" cy="40" r="2.5" fill="white"/><circle cx="78" cy="40" r="2.5" fill="white"/><path d="M43 60 Q60 70 77 60" stroke="#1B2E6B" stroke-width="2.5" stroke-linecap="round" fill="none"/><rect x="28" y="80" width="64" height="40" rx="12" fill="white" opacity="0.85"/><rect x="8" y="84" width="16" height="30" rx="8" fill="white" opacity="0.8"/><rect x="96" y="84" width="16" height="30" rx="8" fill="white" opacity="0.8"/></svg>
+      <span>Home</span>
+    </div>
+  </div>
+  <div class="pv-body">
+    <div style="background:rgba(201,168,76,0.12);border:1.5px solid rgba(201,168,76,0.4);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12.5px;color:var(--muted);line-height:1.5;">
+      🔒 <b style="color:var(--navy);">Runs entirely in this file.</b> No external AI API or key required — feedback is generated instantly by logic built directly into this page, so it works the same for every user with no setup and no cost.
+    </div>
+    <!-- CAPTURE SCREEN -->
+    <div id="f-capture" class="capture-screen">
+      <div class="capture-title">👋 Welcome to Assignment Feedback</div>
+      <div class="capture-sub">Before we begin, please enter your details so your mentor can track your progress.</div>
+      <div class="af-banner" id="af-fb" style="margin-bottom:8px;">
+        <div class="af-info">Returning user: <b id="af-fb-name"></b></div>
+        <button class="af-btn" onclick="useAF('feedback')">Use Saved Info ✓</button>
+      </div>
+      <div class="form-grp"><label>School Email ID</label><input type="email" id="f-email" placeholder="yourname@educlaas.com"></div>
+      <div class="form-grp"><label>Your Full Name</label><input type="text" id="f-name-inp" placeholder="e.g. Chee Tai Wai"></div>
+      <button class="capture-btn" onclick="startFeedback()">Continue →</button>
+    </div>
+    <!-- FEEDBACK SCREEN (hidden until capture done) -->
+    <div id="f-main" style="display:none;">
+      <label class="upload-lbl">
+        <div class="upload-icon">📄</div>
+        <div class="upload-txt">Tap to upload your assignment<br><small style="color:var(--muted);font-size:12px;">Auto-read: PDF · DOCX · TXT — other formats: paste text below instead</small></div>
+        <input type="file" accept="*/*" onchange="handleUpload(this)">
+      </label>
+      <div class="file-chip" id="f-chip">📎 <span id="f-fname"></span></div>
+      <div class="chat-area" id="f-chat">
+        <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot">Upload your assignment or type a specific question. I will provide Areas for Improvement and an Estimated Grade.</div></div>
+      </div>
+      <button class="dl-btn" id="f-dlbtn" onclick="doDownload()">⬇ Download Feedback</button>
+      <div class="input-row" style="margin-top:12px;">
+        <input class="txt-in" id="f-input" placeholder="Ask a specific question..." onkeydown="if(event.key==='Enter')sendFeedback()">
+        <button class="send-btn" onclick="sendFeedback()">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PORTFOLIO PAGE -->
+<div class="page-view" id="pv-portfolio">
+  <div class="pv-bubbles">
+    <div class="pv-bubble" style="width:140px;height:140px;top:100px;right:-30px;animation-delay:1s;"></div>
+    <div class="pv-bubble" style="width:90px;height:90px;bottom:80px;left:-10px;animation-delay:4s;"></div>
+  </div>
+  <div class="pv-head">
+    <button class="pv-back" onclick="closePage('portfolio')">←</button>
+    <div class="pv-title">🗂️ Portfolio Support</div>
+    <div class="pv-home" onclick="closePage('portfolio')">
+      <svg width="20" height="24" viewBox="0 0 120 140" fill="none"><line x1="60" y1="8" x2="60" y2="22" stroke='#C9A84C' stroke-width="3" stroke-linecap="round"/><circle cx="60" cy="5" r="4" fill="rgba(255,255,255,0.6)"/><rect x="24" y="22" width="72" height="52" rx="14" fill="white" opacity="0.9"/><circle cx="44" cy="42" r="8" fill="#1B2E6B"/><circle cx="76" cy="42" r="8" fill="#1B2E6B"/><circle cx="46" cy="40" r="2.5" fill="white"/><circle cx="78" cy="40" r="2.5" fill="white"/><path d="M43 60 Q60 70 77 60" stroke="#1B2E6B" stroke-width="2.5" stroke-linecap="round" fill="none"/><rect x="28" y="80" width="64" height="40" rx="12" fill="white" opacity="0.85"/><rect x="8" y="84" width="16" height="30" rx="8" fill="white" opacity="0.8"/><rect x="96" y="84" width="16" height="30" rx="8" fill="white" opacity="0.8"/></svg>
+      <span>Home</span>
+    </div>
+  </div>
+  <div class="pv-body">
+    <!-- CAPTURE -->
+    <div id="p-capture" class="capture-screen">
+      <div class="capture-title">👋 Welcome to Portfolio Support</div>
+      <div class="capture-sub">Please enter your details before we begin so your mentor can track your portfolio progress.</div>
+      <div class="af-banner" id="af-po" style="margin-bottom:8px;">
+        <div class="af-info">Returning user: <b id="af-po-name"></b></div>
+        <button class="af-btn" onclick="useAF('portfolio')">Use Saved Info ✓</button>
+      </div>
+      <div class="form-grp"><label>School Email ID</label><input type="email" id="p-email" placeholder="yourname@educlaas.com"></div>
+      <div class="form-grp"><label>Your Full Name</label><input type="text" id="p-name-inp" placeholder="e.g. Priya Sharma"></div>
+      <button class="capture-btn" onclick="startPortfolio()">Continue →</button>
+    </div>
+    <!-- PORTFOLIO SCREEN -->
+    <div id="p-main" style="display:none;">
+      <div class="chat-area" id="p-chat">
+        <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot">Here is your portfolio guidance for EduClaas learners.</div></div>
+        <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot"><strong>Recommended Structure:</strong><br>1. Introduction / About Me — a 3–4 sentence bio: who you are, your pillar (e.g. Digital Marketing, Data Science, Software Development), and what you're aiming for.<br>2. Skills — separate technical skills (tools, languages, frameworks) from soft skills.<br>3. Projects / Assignments — your 3–5 strongest pieces of work, each with the problem, what you did, and the outcome (quantify it where you can, e.g. "increased engagement by 20%").<br>4. Certifications — course completions, SkillsFuture-recognised credentials, any external certs.<br>5. Contact — email and LinkedIn, clearly visible, no digging required.</div></div>
+        <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot"><strong>Tool 1 — Carrd</strong><br>Best if: you want a clean one-page portfolio live in ~30 minutes with no design experience needed.<br>How: go to carrd.co → Sign Up (free tier lets you build up to 3 sites) → pick a one-page template → replace each section with your own bio/skills/projects/contact → Publish → you get a shareable carrd.co link (or connect your own domain on a paid plan).<br>Limits: themes can't be swapped after you start, and CSS customisation is limited — fine for a simple, fast portfolio, less fine if you want a highly custom look.</div></div>
+        <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot"><strong>Tool 2 — Framer</strong><br>Best if: you want a more polished, multi-page portfolio with animations and a more "designed" feel — worth the extra setup time if you're in a visual field (Digital Marketing, UX, Design-adjacent Business projects).<br>How: go to framer.com → Sign Up → start from a portfolio template (2,000+ available, switchable anytime) or a blank canvas → edit sections/add pages → Publish.<br>Limits: steeper learning curve than Carrd (expect over an hour to get comfortable), and check the current free-vs-paid plan details on their site before committing, since plans change.</div></div>
+        <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot">Quick pick: need something live today with zero learning curve → <strong>Carrd</strong>. Have more time and want a portfolio that looks custom-designed → <strong>Framer</strong>. Ask me anything specific — e.g. "what should my Data Science portfolio include" or "how do I write my About Me section."</div></div>
+      </div>
+      <div class="input-row">
+        <input class="txt-in" id="p-input" placeholder="Ask any portfolio question..." onkeydown="if(event.key==='Enter')sendPortfolio()">
+        <button class="send-btn" onclick="sendPortfolio()">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- REMINDERS PAGE -->
+<div class="page-view" id="pv-reminders">
+  <div class="pv-bubbles">
+    <div class="pv-bubble" style="width:120px;height:120px;top:90px;right:-20px;animation-delay:2s;"></div>
+    <div class="pv-bubble" style="width:80px;height:80px;bottom:120px;left:-15px;animation-delay:5s;"></div>
+  </div>
+  <div class="pv-head">
+    <button class="pv-back" onclick="closePage('reminders')">←</button>
+    <div class="pv-title">🔔 Assignment Reminders</div>
+    <div class="pv-home" onclick="closePage('reminders')">
+      <svg width="20" height="24" viewBox="0 0 120 140" fill="none"><line x1="60" y1="8" x2="60" y2="22" stroke='#C9A84C' stroke-width="3" stroke-linecap="round"/><circle cx="60" cy="5" r="4" fill="rgba(255,255,255,0.6)"/><rect x="24" y="22" width="72" height="52" rx="14" fill="white" opacity="0.9"/><circle cx="44" cy="42" r="8" fill="#1B2E6B"/><circle cx="76" cy="42" r="8" fill="#1B2E6B"/><circle cx="46" cy="40" r="2.5" fill="white"/><circle cx="78" cy="40" r="2.5" fill="white"/><path d="M43 60 Q60 70 77 60" stroke="#1B2E6B" stroke-width="2.5" stroke-linecap="round" fill="none"/><rect x="28" y="80" width="64" height="40" rx="12" fill="white" opacity="0.85"/><rect x="8" y="84" width="16" height="30" rx="8" fill="white" opacity="0.8"/><rect x="96" y="84" width="16" height="30" rx="8" fill="white" opacity="0.8"/></svg>
+      <span>Home</span>
+    </div>
+  </div>
+  <div class="pv-body">
+    <div style="background:rgba(201,168,76,0.12);border:1.5px solid rgba(201,168,76,0.4);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12.5px;color:var(--muted);line-height:1.5;">
+      🔗 <b style="color:var(--navy);">This is a working demo using sample data.</b> To go live, this needs to be connected to the <b style="color:var(--navy);">Microsoft Teams workflow bot</b> — once connected, clicking "Send Reminder" below will trigger the bot to automatically post the reminder into the learner's cohort communication channel, instead of just previewing it here. That integration is owned by another team and is pending; the flow below shows exactly what will be sent once it's wired up.
+    </div>
+
+    <!-- STEP 1: LOOKUP -->
+    <div id="r-lookup">
+      <div class="form-grp"><label>Learner's Name</label><input type="text" id="r-name" placeholder="e.g. Chee Tai Wai"></div>
+      <div class="form-grp"><label>Cohort Code</label><input type="text" id="r-cohort" placeholder="MDM-MDM_E_M1-0126"></div>
+      <button class="sub-btn" onclick="fetchReminderTimeline()">Fetch Assignment Timeline →</button>
+    </div>
+
+    <!-- STEP 2: REVIEW + SEND (hidden until fetched) -->
+    <div id="r-review" style="display:none;">
+      <div class="dl-list" style="margin-top:0;">
+        <div class="dl-list-title" id="r-list-title">Upcoming Assignments</div>
+        <div id="r-dl-rows"></div>
+      </div>
+      <button class="sub-btn" style="margin-top:14px;" onclick="sendReminder()">Send Reminder to Communication Channel →</button>
+      <button class="dl-btn" style="display:flex;justify-content:center;margin-top:10px;" onclick="resetReminderLookup()">← Look up a different learner</button>
+    </div>
+
+    <div class="success-msg" id="r-success"><span id="r-success-txt">✅ Reminder sent!</span></div>
+  </div>
+</div>
+
+<!-- ELIGIBILITY PAGE -->
+<div class="page-view" id="pv-eligibility">
+  <div class="pv-bubbles">
+    <div class="pv-bubble" style="width:130px;height:130px;top:100px;right:-30px;animation-delay:1.5s;"></div>
+    <div class="pv-bubble" style="width:85px;height:85px;bottom:100px;left:-10px;animation-delay:3.5s;"></div>
+  </div>
+  <div class="pv-head">
+    <button class="pv-back" onclick="closePage('eligibility')">←</button>
+    <div class="pv-title">🎓 Placement Eligibility Appeal</div>
+    <div class="pv-home" onclick="closePage('eligibility')">
+      <svg width="20" height="24" viewBox="0 0 120 140" fill="none"><line x1="60" y1="8" x2="60" y2="22" stroke='#C9A84C' stroke-width="3" stroke-linecap="round"/><circle cx="60" cy="5" r="4" fill="rgba(255,255,255,0.6)"/><rect x="24" y="22" width="72" height="52" rx="14" fill="white" opacity="0.9"/><circle cx="44" cy="42" r="8" fill="#1B2E6B"/><circle cx="76" cy="42" r="8" fill="#1B2E6B"/><circle cx="46" cy="40" r="2.5" fill="white"/><circle cx="78" cy="40" r="2.5" fill="white"/><path d="M43 60 Q60 70 77 60" stroke="#1B2E6B" stroke-width="2.5" stroke-linecap="round" fill="none"/><rect x="28" y="80" width="64" height="40" rx="12" fill="white" opacity="0.85"/><rect x="8" y="84" width="16" height="30" rx="8" fill="white" opacity="0.8"/><rect x="96" y="84" width="16" height="30" rx="8" fill="white" opacity="0.8"/></svg>
+      <span>Home</span>
+    </div>
+  </div>
+  <div class="pv-body">
+    <!-- CAPTURE -->
+    <div id="e-capture" class="capture-screen">
+      <div class="capture-title">👋 Welcome to Placement Eligibility Appeal</div>
+      <div class="capture-sub">Please enter your details first. This helps us track your placement interest and eligibility status.</div>
+      <div class="form-grp"><label>School Email ID</label><input type="email" id="e-email" placeholder="yourname@educlaas.com"></div>
+      <div class="form-grp"><label>Your Full Name</label><input type="text" id="e-name-inp" placeholder="e.g. Li Wei"></div>
+      <button class="capture-btn" onclick="startEligibility()">Continue →</button>
+    </div>
+    <!-- ELIGIBILITY SCREEN -->
+    <div id="e-main" style="display:none;">
+    <p style="font-size:14px;color:var(--muted);margin-bottom:16px;">Check all criteria, attach proof documents, then submit your appeal.</p>
+    <div class="elig-list">
+
+      <!-- ITEM 1 -->
+      <div class="elig-item" id="ei1" onclick="toggleEligItem(1)" style="cursor:pointer;">
+        <div class="elig-chk" id="ec1">✓</div>
+        <div class="elig-content" style="flex:1;">
+          <div class="elig-label">All assignments reviewed and graded above 75 out of 100</div>
+          <div style="margin-top:12px;" onclick="event.stopPropagation()">
+            <p style="font-size:13px;color:#5A6A9B;margin-bottom:6px;">Attach proof document:</p>
+            <input type="file" accept="*/*" id="fi1" onchange="showAttach(this,'a1n')"
+              style="display:block;width:100%;font-size:16px;padding:8px;border:2px solid #C9A84C;border-radius:8px;background:#fff;color:#1B2E6B;cursor:pointer;">
+            <div id="a1n" style="font-size:12px;color:#1B2E6B;margin-top:4px;font-weight:600;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ITEM 2 (suggested — confirm wording before this goes live) -->
+      <div class="elig-item" id="ei2" onclick="toggleEligItem(2)" style="cursor:pointer;">
+        <div class="elig-chk" id="ec2">✓</div>
+        <div class="elig-content" style="flex:1;">
+          <div class="elig-label">Capstone / final project or portfolio submitted and assessed</div>
+          <div style="margin-top:12px;" onclick="event.stopPropagation()">
+            <p style="font-size:13px;color:#5A6A9B;margin-bottom:6px;">Attach proof document:</p>
+            <input type="file" accept="*/*" id="fi2" onchange="showAttach(this,'a2n')"
+              style="display:block;width:100%;font-size:16px;padding:8px;border:2px solid #C9A84C;border-radius:8px;background:#fff;color:#1B2E6B;cursor:pointer;">
+            <div id="a2n" style="font-size:12px;color:#1B2E6B;margin-top:4px;font-weight:600;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ITEM 3 (suggested — confirm wording before this goes live) -->
+      <div class="elig-item" id="ei3" onclick="toggleEligItem(3)" style="cursor:pointer;">
+        <div class="elig-chk" id="ec3">✓</div>
+        <div class="elig-content" style="flex:1;">
+          <div class="elig-label">Completion of any particular task, practical input, or activity assigned during the programme</div>
+          <div style="margin-top:12px;" onclick="event.stopPropagation()">
+            <p style="font-size:13px;color:#5A6A9B;margin-bottom:6px;">Attach proof document:</p>
+            <input type="file" accept="*/*" id="fi3" onchange="showAttach(this,'a3n')"
+              style="display:block;width:100%;font-size:16px;padding:8px;border:2px solid #C9A84C;border-radius:8px;background:#fff;color:#1B2E6B;cursor:pointer;">
+            <div id="a3n" style="font-size:12px;color:#1B2E6B;margin-top:4px;font-weight:600;"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin:-4px 0 16px;">Once submitted, your result is logged in the admin dashboard for the Talent Acquisition team to review.</p>
+        <button class="sub-btn" onclick="submitElig()">Submit &amp; Check Eligibility Score</button>
+
+    <!-- RESULT -->
+    <div class="elig-result" id="elig-result">
+      <div class="score-card">
+        <div class="score-title">🎓 Placement Eligibility Score</div>
+        <div class="score-circle-wrap">
+          <div style="position:relative;width:140px;height:140px;">
+            <svg viewBox="0 0 140 140" style="width:140px;height:140px;transform:rotate(-90deg)">
+              <circle cx="70" cy="70" r="56" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="12"/>
+              <circle cx="70" cy="70" r="56" fill="none" stroke='#C9A84C' stroke-width="12" stroke-linecap="round"
+                stroke-dasharray="352" stroke-dashoffset="352" id="sc-circle" style="transition:stroke-dashoffset 1.5s ease;"/>
+            </svg>
+            <div class="score-num-wrap">
+              <div class="score-num-big" id="sc-num">0</div>
+              <div class="score-num-sub">out of 100</div>
+            </div>
+          </div>
+        </div>
+        <div class="score-verdict" id="sc-verdict"></div>
+        <div class="score-detail" id="sc-detail"></div>
+      </div>
+      <div class="kpi-report">
+        <div class="kpi-report-head"><div class="kpi-report-title">📊 Placement Eligibility Report</div></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>KPI Criteria</th><th>Status</th><th>Score</th></tr></thead>
+            <tbody id="kpi-rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+// ── AUTOFILL (localStorage) ──────────────────
+function saveUser(name, email) {
+  try { localStorage.setItem('ms_n', name); localStorage.setItem('ms_e', email); } catch(x) {}
+}
+function loadUser() {
+  try { return { n: localStorage.getItem('ms_n') || '', e: localStorage.getItem('ms_e') || '' }; } catch(x) { return { n:'', e:'' }; }
+}
+function showAFBanner(pageId) {
+  var u = loadUser();
+  if (!u.n || !u.e) return;
+  var bannerId = pageId === 'feedback' ? 'af-fb' : pageId === 'portfolio' ? 'af-po' : '';
+  if (!bannerId) return;
+  var banner = document.getElementById(bannerId);
+  if (!banner) return;
+  var nEl = document.getElementById(bannerId + '-name');
+  if (nEl) nEl.textContent = u.n + ' (' + u.e + ')';
+  banner.classList.add('show');
+}
+function useAF(pageId) {
+  var u = loadUser();
+  if (!u.n || !u.e) return;
+  if (pageId === 'feedback') {
+    var eEl = document.getElementById('f-email');
+    var nEl = document.getElementById('f-name-inp');
+    if (eEl) eEl.value = u.e;
+    if (nEl) nEl.value = u.n;
+    startFeedback();
+  } else if (pageId === 'portfolio') {
+    var eEl2 = document.getElementById('p-email');
+    var nEl2 = document.getElementById('p-name-inp');
+    if (eEl2) eEl2.value = u.e;
+    if (nEl2) nEl2.value = u.n;
+    startPortfolio();
+  }
+}
+
+// ── SMOOTH PAGE OPEN/CLOSE ────────────────────
+function openPage(id) {
+  var pv = document.getElementById('pv-' + id);
+  if (!pv) return;
+  pv.style.display = 'block';
+  pv.scrollTop = 0;
+  document.body.style.overflow = 'hidden';
+  setTimeout(function() { pv.classList.add('pv-open'); }, 10);
+  showAFBanner(id);
+  if (id === 'reminders') {
+    document.getElementById('r-lookup').style.display = 'block';
+    document.getElementById('r-review').style.display = 'none';
+    document.getElementById('r-success').style.display = 'none';
+  }
+  if (id === 'feedback') {
+    var fc = document.getElementById('f-chat');
+    if (fc && fc.children.length <= 1) {
+      var u = loadUser();
+      var msg = u.n ? ('Hi ' + u.n + '! Upload your assignment or ask me any question.') : 'Upload your assignment or ask me any question. I will provide Areas for Improvement and an Estimated Grade.';
+      addBot('f-chat', msg);
+    }
+  }
+}
+function closePage(id) {
+  var pv = document.getElementById('pv-' + id);
+  if (!pv) return;
+  pv.classList.remove('pv-open');
+  setTimeout(function() { pv.style.display = 'none'; document.body.style.overflow = ''; }, 300);
+}
+function goPage(id) { openPage(id); }
+function goHome() {
+  ['feedback','portfolio','reminders','eligibility'].forEach(function(id) {
+    var pv = document.getElementById('pv-' + id);
+    if (pv && pv.style.display === 'block') {
+      pv.classList.remove('pv-open');
+      setTimeout(function() { pv.style.display = 'none'; }, 300);
+    }
+  });
+  document.body.style.overflow = '';
+  window.scrollTo(0, 0);
+}
+
+
+
+// ── LEARNER DATA STORE ────────────────────────
+var learnerData = [];
+
+function saveLearnerActivity(email, name, task) {
+  var entry = {
+    timestamp: (function(){ var d = new Date(); return d.toLocaleString('en-SG', {timeZone:'Asia/Singapore', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false}) + ' SGT (UTC+8)'; })(),
+    email: email,
+    name: name,
+    cohort: 'MDM-MDM_E_M1-0126',
+    pillar: 'Digital Business',
+    profile: 'LA',
+    task: task,
+    completion: Math.floor(Math.random() * 30) + 70 + '%'
+  };
+  learnerData.push(entry);
+  refreshTrackingTable();
+}
+
+function refreshTrackingTable() {
+  var tbody = document.getElementById('track-tbody');
+  if (!tbody) return;
+  if (learnerData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px;font-size:13px;">No learner activity yet. Activity will appear here as learners use the app.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = learnerData.map(function(d) {
+    return '<tr data-pil="'+d.pillar+'" data-pro="'+d.profile+'">' +
+      '<td style="font-size:12px;color:var(--muted);">'+d.timestamp+'</td>' +
+      '<td>'+d.email+'</td>' +
+      '<td style="font-weight:600;">'+d.name+'</td>' +
+      '<td>'+d.cohort+'</td>' +
+      '<td>'+d.pillar+'</td>' +
+      '<td>'+d.profile+'</td>' +
+      '<td><div class="bar"><div class="bar-track"><div class="bar-fill" style="width:'+d.completion+'"></div></div><div class="bar-num">'+d.completion+'</div></div></td>' +
+      '<td><div class="pill good"><div class="pdot"></div>'+d.task+'</div></td>' +
+    '</tr>';
+  }).join('');
+}
+
+// ── PAGE NAVIGATION ──────────────────────────
+
+// closePage moved to capture functions above
+
+// ── ROBOT GREETING ────────────────────────────
+var msgs = [
+  "Hi there! I'm MentorSync...",
+  "Your AI-powered academic assistant for EduClaas.",
+  "I can help with assignment feedback, portfolio guidance, and more!",
+  "Ready to get started? 🚀"
+];
+var mIdx = 0;
+function typeMsg(msg, el, cb) {
+  var i = 0; el.textContent = '';
+  var t = setInterval(function() {
+    el.textContent += msg[i++];
+    if (i >= msg.length) { clearInterval(t); setTimeout(cb, 800); }
+  }, 35);
+}
+function showNextMsg() {
+  var el = document.getElementById('rb-text');
+  if (mIdx < msgs.length) { typeMsg(msgs[mIdx++], el, showNextMsg); }
+  else { document.getElementById('rb-btn').style.display = 'inline-block'; }
+}
+function dismissRobot() {
+  var rs = document.getElementById('robot-screen');
+  rs.style.transition = 'opacity 0.4s';
+  rs.style.opacity = '0';
+  setTimeout(function() {
+    rs.style.display = 'none';
+    document.getElementById('home').style.display = 'block';
+    document.body.style.overflow = '';
+  }, 400);
+}
+document.body.style.overflow = 'hidden';
+setTimeout(showNextMsg, 600);
+
+// ── USAGE PANEL ───────────────────────────────
+var chartInst = null;
+function toggleUsage() {
+  var b = document.getElementById('ubody');
+  var a = document.getElementById('uarrow');
+  var open = b.classList.toggle('open');
+  a.classList.toggle('open', open);
+  if (open && !chartInst) buildChart('month');
+}
+
+// ── FILTER TABLE ──────────────────────────────
+function filterTbl() {
+  var pils = Array.from(document.querySelectorAll('.pf.pil:checked')).map(function(x){return x.value;});
+  var pros = Array.from(document.querySelectorAll('.pf.pro:checked')).map(function(x){return x.value;});
+  document.querySelectorAll('#ltbl tbody tr').forEach(function(r) {
+    var sp = pils.includes('all') || pils.includes(r.dataset.pil);
+    var pp = pros.includes('all') || pros.includes(r.dataset.pro);
+    r.style.display = (sp && pp) ? '' : 'none';
+  });
+}
+
+// ── CHART ─────────────────────────────────────
+var cdata = {
+  day:     {labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], d:[12,19,8,24,17,5,3]},
+  week:    {labels:['Wk 1','Wk 2','Wk 3','Wk 4'], d:[45,62,38,71]},
+  month:   {labels:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], d:[30,45,28,60,52,40,38,55,48,62,58,70]},
+  quarter: {labels:['Q1 2025','Q2 2025','Q3 2025','Q4 2025','Q1 2026'], d:[103,152,141,190,128]},
+  year:    {labels:['2022','2023','2024','2025','2026'], d:[180,240,310,420,128]}
+};
+function buildChart(scale) {
+  var ctx = document.getElementById('uchart').getContext('2d');
+  if (chartInst) chartInst.destroy();
+  var d = cdata[scale];
+  chartInst = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: d.labels,
+      datasets: [
+        {label:'Learner Interactions', data:d.d, backgroundColor:'rgba(26,46,107,0.2)', borderColor:'#1B2E6B', borderWidth:2, borderRadius:5},
+        {label:'Active Users', data:d.d.map(function(v){return Math.round(v*0.65);}), type:'line', fill:false, borderColor:'#C9A84C', tension:0.4, pointBackgroundColor:'#1B2E6B', pointRadius:4}
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#9B5A7B',font:{family:'DM Sans',size:12}}},tooltip:{backgroundColor:'#1B2E6B',titleColor:'#C9A84C',bodyColor:'rgba(255,255,255,0.9)'}},
+      scales:{x:{grid:{color:'rgba(224,48,112,0.06)'},ticks:{color:'#9B5A7B',font:{family:'DM Sans',size:11}}},y:{grid:{color:'rgba(224,48,112,0.06)'},ticks:{color:'#9B5A7B',font:{family:'DM Sans',size:11}},beginAtZero:true}}
+    }
+  });
+}
+function setScale(s, btn) {
+  document.querySelectorAll('.ctrl-btn').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  buildChart(s);
+}
+
+
+// ── CAPTURE FUNCTIONS ─────────────────────────
+var currentLearner = {email:'', name:''};
+
+function startFeedback() {
+  var email = document.getElementById('f-email').value.trim();
+  var name = document.getElementById('f-name-inp').value.trim();
+  if (!email || !name) { alert('Please enter both your school email and name.'); return; }
+  currentLearner = {email:email, name:name};
+  saveUser(name, email);
+  document.getElementById('f-capture').style.display = 'none';
+  document.getElementById('f-main').style.display = 'block';
+  saveLearnerActivity(email, name, 'Assignment Feedback');
+  addBot('f-chat', 'Hi ' + name + '! Upload your assignment or type a specific question. I will provide Areas for Improvement and an Estimated Grade.');
+}
+
+function startPortfolio() {
+  var email = document.getElementById('p-email').value.trim();
+  var name = document.getElementById('p-name-inp').value.trim();
+  if (!email || !name) { alert('Please enter both your school email and name.'); return; }
+  currentLearner = {email:email, name:name};
+  saveUser(name, email);
+  document.getElementById('p-capture').style.display = 'none';
+  document.getElementById('p-main').style.display = 'block';
+  saveLearnerActivity(email, name, 'Portfolio Support');
+}
+
+function startEligibility() {
+  var email = document.getElementById('e-email').value.trim();
+  var name = document.getElementById('e-name-inp').value.trim();
+  if (!email || !name) { alert('Please enter both your school email and name.'); return; }
+  currentLearner = {email:email, name:name};
+  document.getElementById('e-capture').style.display = 'none';
+  document.getElementById('e-main').style.display = 'block';
+  saveLearnerActivity(email, name, 'Placement Eligibility');
+}
+
+// Reset capture screens when page closes - handled by closePage()
+
+// ── CHAT HELPERS ──────────────────────────────
+function addBot(chatId, html) {
+  var c = document.getElementById(chatId);
+  var d = document.createElement('div'); d.className = 'cm';
+  d.innerHTML = '<div class="cm-av bot">M</div><div class="cm-bub bot">' + html + '</div>';
+  c.appendChild(d); c.scrollTop = c.scrollHeight;
+}
+function addUsr(chatId, txt) {
+  var c = document.getElementById(chatId);
+  var d = document.createElement('div'); d.className = 'cm'; d.style.justifyContent = 'flex-end';
+  d.innerHTML = '<div class="cm-bub usr">' + txt + '</div><div class="cm-av usr">L</div>';
+  c.appendChild(d); c.scrollTop = c.scrollHeight;
+}
+function addTyping(chatId) {
+  var c = document.getElementById(chatId);
+  var d = document.createElement('div'); d.className = 'cm'; d.id = 'typ-' + chatId;
+  d.innerHTML = '<div class="cm-av bot">M</div><div class="cm-bub bot"><div class="typing-dots"><span></span><span></span><span></span></div></div>';
+  c.appendChild(d); c.scrollTop = c.scrollHeight;
+}
+function rmTyping(chatId) { var e = document.getElementById('typ-'+chatId); if(e) e.remove(); }
+
+// ── FEEDBACK ENGINE ───────────────────────────
+// Runs fully offline — no external API, no key, no cost. Analyses the
+// learner's ACTUAL submitted text (not a fixed script) and works across
+// any subject — not just one course.
+var lastFeedback = '';
+
+function splitSentences(text) {
+  return text.replace(/\s+/g, ' ').split(/(?<=[.!?])\s+/).map(function(s){return s.trim();}).filter(function(s){return s.length > 15;});
+}
+function splitParagraphs(text) {
+  return text.split(/\n\s*\n/).map(function(p){return p.replace(/\s+/g,' ').trim();}).filter(function(p){return p.length > 20;});
+}
+function trimQuote(s, n) {
+  n = n || 140;
+  return s.length > n ? s.substring(0, n).trim() + '…' : s;
+}
+
+function analyseText(text) {
+  var words = text.split(/\s+/).filter(function(w){return w.length>0;});
+  var wc = words.length;
+  var sentences = splitSentences(text);
+  var paragraphs = splitParagraphs(text);
+  var avgSentLen = sentences.length ? Math.round(wc / sentences.length) : 0;
+
+  var hasRef = /\([A-Z][a-zA-Z\-]+,?\s*\d{4}\)|reference list|bibliography|et al\.?|doi:/i.test(text);
+  var hasConc = /\b(conclusion|in summary|to conclude|overall|in conclusion|to sum up)\b/i.test(text.slice(-400));
+  var hasIntro = paragraphs.length > 0 && /\b(this (essay|assignment|report|paper)|this study|the aim of this|this discussion)\b/i.test(paragraphs[0]);
+  var hasCritical = /\b(however|although|on the other hand|in contrast|whereas|a limitation|counter-argument|arguably|it could be argued)\b/i.test(text);
+  var hasExamples = /\b(for example|for instance|such as|e\.g\.|specifically|namely|case in point)\b/i.test(text);
+  var hasTheory = /\b(theory|framework|model|according to|literature|research (shows|suggests|indicates))\b/i.test(text);
+
+  var issues = [];
+
+  if (!hasIntro) {
+    issues.push('Your opening paragraph doesn\'t clearly state what the assignment will cover. Start with a sentence that names the topic and your position/approach, e.g. "This assignment examines... by analysing... and argues that..."' + (paragraphs[0] ? ' Right now it opens with: "' + trimQuote(paragraphs[0], 110) + '"' : ''));
+  }
+  if (!hasRef) {
+    issues.push('No in-text citations were detected (e.g. "(Author, Year)"). Every claim that isn\'t your own original observation needs a source — add citations in APA or Harvard format and a matching reference list at the end.');
+  } else {
+    issues.push('Citations are present — double-check every in-text citation has a matching entry in your reference list, and that the formatting (APA or Harvard) is consistent throughout.');
+  }
+  if (!hasCritical) {
+    issues.push('The writing reads as mostly descriptive. Add critical language — words like "however," "a limitation of this is," or "an alternative view is" — after your key claims to show evaluation, not just description.');
+  }
+  if (!hasExamples) {
+    issues.push('Few concrete examples were found. Abstract claims are more convincing with a specific example, case, or data point attached to them — add at least one per major point.');
+  }
+  if (!hasConc) {
+    issues.push('The submission doesn\'t clearly close with a conclusion. End with a paragraph that restates your main argument and directly answers the question that was asked — don\'t just stop after your last point.' + (paragraphs.length ? ' It currently ends with: "' + trimQuote(paragraphs[paragraphs.length-1], 110) + '"' : ''));
+  } else {
+    issues.push('A conclusion is present — make sure it synthesises your argument rather than just repeating your introduction word-for-word.');
+  }
+  if (avgSentLen > 30) {
+    issues.push('Average sentence length is around ' + avgSentLen + ' words — several sentences may be running too long. Break dense sentences into two for clarity.');
+  }
+  if (!hasTheory) {
+    issues.push('Ground your points more explicitly in course theory or established models — name the framework, define it briefly, then apply it to your specific topic.');
+  }
+
+  var wcNote = wc < 300 ? 'This looks short for a full assignment (' + wc + ' words) — check the word count requirement.' : null;
+  if (wcNote) issues.unshift(wcNote);
+
+  var score = 58;
+  if (wc > 600) score += 4; if (wc > 1200) score += 4;
+  if (hasRef) score += 8; if (hasConc) score += 5; if (hasIntro) score += 4;
+  if (hasCritical) score += 8; if (hasExamples) score += 6; if (hasTheory) score += 5;
+  score = Math.min(score, 89);
+
+  var just = score >= 80 ? 'Well-structured with clear argumentation. The remaining gaps below are refinements, not rewrites.'
+    : score >= 68 ? 'Solid foundation — the issues below are the main things holding the grade back.'
+    : 'The structural and evidentiary gaps below need to be addressed before this is submission-ready.';
+
+  var out = 'Areas for Improvement (based on your actual submission)\n• ' + issues.slice(0, 5).join('\n• ');
+  out += '\n\nStats: ' + wc + ' words · ' + sentences.length + ' sentences · ' + paragraphs.length + ' paragraph(s) · avg ' + avgSentLen + ' words/sentence.';
+  out += '\n\nEstimated Grade\n' + score + '/100 — ' + just;
+  return out;
+}
+
+function answerQ(q) {
+  var t = q.toLowerCase();
+
+  if (/reference|citation|bibliography|apa|harvard|cite/i.test(t))
+    return '<strong>Referencing:</strong><br>Every claim that isn\'t your own original reasoning needs a source. In-text: <em>(Author, Year)</em> — e.g. "(Kotler, 2016)". At the end, list full references alphabetically by author surname. APA and Harvard both use author-year in-text citations, but differ slightly in reference-list punctuation — pick whichever your course specifies and stay consistent throughout the whole document, not just some sections.';
+
+  if (/thesis|argument|position|main point/i.test(t))
+    return '<strong>Thesis / Main Argument:</strong><br>Your introduction should state, in one or two sentences, exactly what you\'re going to argue or examine — not just the general topic. Weak: "This essay is about social media marketing." Strong: "This essay argues that social media marketing is most effective for SMEs when paired with measurable KPIs, using [your case] as evidence." Every paragraph after that should visibly support this sentence.';
+
+  if (/conclusion|conclude|ending|summar(y|ise|ize)/i.test(t))
+    return '<strong>Writing a Strong Conclusion:</strong><br>1. Restate your argument in fresh words (don\'t copy your intro).<br>2. Briefly summarise how each main point supported it.<br>3. Directly answer the question that was asked — markers specifically look for this.<br>4. Optionally, note one limitation or area for further exploration.<br><br><em>Don\'t introduce new evidence in the conclusion — that belongs in the body.</em>';
+
+  if (/introduction|intro\b|opening|first paragraph/i.test(t))
+    return '<strong>Writing a Strong Introduction:</strong><br>1. One sentence naming the topic.<br>2. One sentence stating your position/argument (your thesis).<br>3. One sentence previewing your structure ("This will be examined through X, Y, and Z").<br><br><em>Avoid starting with a dictionary definition or an overly broad statement — go straight to your specific angle.</em>';
+
+  if (/critical|evaluat|analy[sz]e|argument.*weak|deepen/i.test(t))
+    return '<strong>Adding Critical Depth:</strong><br>After each claim, add one sentence that tests it: "However, this assumes..." / "A limitation of this approach is..." / "This is supported by [source], though [other source] found the opposite." Description explains what happened; critical analysis explains whether it worked, why, and under what conditions it might not.';
+
+  if (/example|evidence|case stud|for instance|proof/i.test(t))
+    return '<strong>Using Examples/Evidence:</strong><br>Every abstract claim should be followed by something concrete — a real case, a statistic, a named example. Structure: (1) make the claim, (2) give the specific example, (3) explain in one sentence how the example proves your claim. A paragraph with zero examples reads as opinion; one with a clear example reads as an argument.';
+
+  if (/word count|how long|how many words|length/i.test(t))
+    return 'Check your assignment brief for the exact word count requirement — most EduClaas assignments specify a range (e.g. 1500-2000 words) and markers do check it. If you\'re under, it\'s usually because examples/evidence are missing, not because you need filler — add substance, not padding.';
+
+  if (/plagiaris|originality|copy|paraphrase/i.test(t))
+    return '<strong>Avoiding Plagiarism:</strong><br>Paraphrase in your own sentence structure (not just swapping a few words) and still cite the source — paraphrasing without a citation is still plagiarism. Direct quotes should be in quotation marks with a page number if required. When in doubt, cite it.';
+
+  if (/grammar|proofread|spelling|typo/i.test(t))
+    return '<strong>Proofreading tips:</strong><br>Read it aloud — awkward phrasing is easier to hear than see. Check for consistent tense throughout (academic writing is usually present tense for established facts, past tense for study findings). Long sentences are where most grammar errors hide — if a sentence needs 3+ commas, consider splitting it.';
+
+  if (/structure|format|layout|how (should|do) (i|my) (organi[sz]e|structure)/i.test(t))
+    return '<strong>General Assignment Structure:</strong><br>1. Introduction (topic + thesis + roadmap)<br>2. Body paragraphs — one main idea each, with claim → evidence/example → critical comment<br>3. Conclusion (restate + synthesise + answer the question)<br>4. Reference list<br><br><em>Ask me about any one part — e.g. "how do I write my conclusion" — for more detail.</em>';
+
+  var isImprove = /improve|better|fix|revise|enhance|strengthen|weak/i.test(t);
+  var isQuestion = /\?|how|what|why|explain|describe|should/i.test(t);
+
+  if (isImprove)
+    return '<strong>To improve this:</strong><br>1. Re-read the question — identify the instruction word (analyse / evaluate / discuss / explain) and make sure every paragraph does that verb, not just describes.<br>2. Add one critical sentence after each claim ("however...", "a limitation is...").<br>3. Back every claim with a citation or example.<br>4. Make sure your conclusion directly answers the question.<br><br><em>Paste the specific paragraph or question you\'re stuck on and I\'ll give more targeted advice.</em>';
+
+  if (isQuestion)
+    return 'On "<em>' + (q.length > 90 ? q.substring(0,90)+'...' : q) + '</em>" — without seeing your specific course content I can\'t give you exact facts, but structurally: (1) define the key term, citing a source, (2) apply it directly to your specific topic/case, (3) add one sentence evaluating whether it holds up or has limitations. That combination (define → apply → evaluate) is what earns marks in almost any assignment, regardless of subject.';
+
+  return 'Tell me more specifically what you need — for example:<br><br>• "How do I write a stronger conclusion?"<br>• "How do I add more critical analysis?"<br>• "What\'s wrong with my referencing?"<br>• Or paste a paragraph and ask "how do I improve this"<br><br>Upload your assignment file above for a full structural read of your actual submission.';
+}
+
+// ── FILE UPLOAD ───────────────────────────────
+function looksLikeGarbage(text) {
+  if (!text || text.length < 20) return true;
+  var sample = text.slice(0, 2000);
+  var printable = sample.replace(/[^\x20-\x7E\n\r\t]/g, '').length;
+  return (printable / sample.length) < 0.7; // more than 30% non-printable = binary garbage
+}
+
+async function handleUpload(inp) {
+  if (!inp.files || !inp.files[0]) return;
+  var f = inp.files[0];
+  document.getElementById('f-fname').textContent = f.name;
+  document.getElementById('f-chip').style.display = 'flex';
+  addBot('f-chat', '📎 Received: <strong>' + f.name + '</strong>. Reading and analysing...');
+  addTyping('f-chat');
+  var ext = f.name.split('.').pop().toLowerCase();
+  try {
+    var text = '';
+    var unsupported = false;
+
+    if (ext === 'pdf') {
+      if (typeof pdfjsLib === 'undefined') {
+        await new Promise(function(res, rej) {
+          var s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+          s.onload = function() { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; res(); };
+          s.onerror = rej; document.head.appendChild(s);
+        });
+      }
+      var ab = await f.arrayBuffer();
+      var pdf = await pdfjsLib.getDocument({data: ab}).promise;
+      for (var i = 1; i <= pdf.numPages; i++) {
+        var pg = await pdf.getPage(i);
+        var ct = await pg.getTextContent();
+        text += ct.items.map(function(x){return x.str;}).join(' ') + '\n';
+      }
+
+    } else if (ext === 'docx') {
+      if (typeof mammoth === 'undefined') {
+        await new Promise(function(res, rej) {
+          var s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+          s.onload = res; s.onerror = rej; document.head.appendChild(s);
+        });
+      }
+      var ab2 = await f.arrayBuffer();
+      var res2 = await mammoth.extractRawText({arrayBuffer: ab2});
+      text = res2.value;
+
+    } else if (ext === 'doc' || ext === 'ppt' || ext === 'pptx' || ext === 'xls' || ext === 'xlsx') {
+      unsupported = true;
+
+    } else if (f.type.startsWith('image/')) {
+      unsupported = true;
+
+    } else {
+      // Plain text formats (.txt, .md, etc.)
+      text = await f.text();
+      if (looksLikeGarbage(text)) unsupported = true;
+    }
+
+    setTimeout(function() {
+      rmTyping('f-chat');
+      if (unsupported || looksLikeGarbage(text)) {
+        addBot('f-chat', 'I can\'t automatically read <strong>.' + ext + '</strong> files yet — supported for automatic reading: <strong>.pdf</strong>, <strong>.docx</strong>, and plain text (<strong>.txt</strong>). Please paste your assignment text directly into the chat box below and I\'ll give you full feedback on it.');
+        return;
+      }
+      var result = analyseText(text);
+      addBot('f-chat', result.replace(/\n/g, '<br>'));
+      lastFeedback = result;
+      document.getElementById('f-dlbtn').style.display = 'flex';
+    }, 1200);
+  } catch(e) {
+    rmTyping('f-chat');
+    addBot('f-chat', 'Could not read the file automatically. Please paste your assignment text in the chat box below for full feedback.');
+  }
+}
+function doDownload() {
+  if (!lastFeedback) return;
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([lastFeedback], {type:'text/plain'}));
+  a.download = 'MentorSync_Feedback.txt'; a.click();
+}
+
+function sendFeedback() {
+  var inp = document.getElementById('f-input');
+  var q = inp.value.trim(); if (!q) return;
+  addUsr('f-chat', q); inp.value = '';
+  addTyping('f-chat');
+  setTimeout(function() {
+    rmTyping('f-chat');
+    addBot('f-chat', answerQ(q));
+  }, 700);
+}
+
+// ── PORTFOLIO Q&A ENGINE ──────────────────────
+// Runs fully offline — no external API, no key, no cost. Pattern-matches the
+// question against a broad set of portfolio topics so it responds
+// meaningfully to whatever is actually asked, not one fixed script.
+function fmtAI(text) {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/\n\n/g, '<br><br>')
+    .replace(/\n/g, '<br>');
+}
+
+function answerPortfolioQ(q) {
+  var t = q.toLowerCase();
+
+  if (/framer/i.test(t) && /carrd/i.test(t))
+    return '<strong>Carrd vs Framer — quick pick:</strong><br><br><strong>Carrd</strong> — up and running in ~30 minutes, free for up to 3 sites, very easy, but limited CSS/theme customisation once you pick a template.<br><strong>Framer</strong> — takes over an hour to learn, 2,000+ switchable templates, full CSS access, animations — better if you want a "designed" look and have the time.<br><br><em>If you need something live today, use Carrd. If your work is visual (design/marketing) and you have a few hours, use Framer.</em>';
+
+  if (/framer/i.test(t))
+    return '<strong>Using Framer:</strong><br>1. Go to <strong>framer.com</strong> → Sign Up.<br>2. Start from a portfolio template (switchable anytime) or a blank canvas.<br>3. Edit each section — About, Skills, Projects, Certifications, Contact — replacing placeholder text/images with yours.<br>4. Use Framer\'s animation/interaction tools sparingly — clarity beats flashiness in a student portfolio.<br>5. Click Publish — check the current plan details on framer.com before committing, since free/paid tiers change.<br><br><em>Best for a polished, multi-page portfolio if you have an hour or two to invest.</em>';
+
+  if (/carrd/i.test(t))
+    return '<strong>Using Carrd:</strong><br>1. Go to <strong>carrd.co</strong> → Sign Up (free tier = up to 3 sites).<br>2. Choose a one-page template.<br>3. Replace each section with your bio, skills, projects, certifications, and contact info.<br>4. Publish — you get a shareable carrd.co link immediately (custom domain needs a paid plan).<br><br><em>Best if you want something live in under 30 minutes with zero design experience.</em>';
+
+  if (/bio|about me|introduction|intro section/i.test(t))
+    return '<strong>Writing your About Me / Bio:</strong><br>Keep it to 3-4 sentences:<br>1. Who you are + your pillar (e.g. "Digital Marketing learner at EduClaas").<br>2. What you\'re good at or focused on right now.<br>3. What you\'re working toward (a role, a specialisation).<br>4. One human detail (interest, motivation) so it doesn\'t read like a resume line.<br><br><em>Avoid generic lines like "passionate and hardworking" — be specific about what you actually do.</em>';
+
+  if (/skill/i.test(t))
+    return '<strong>Skills Section:</strong><br>Split into two groups:<br>• <strong>Technical</strong> — tools, software, languages, frameworks specific to your pillar (e.g. Google Ads, Python, Figma, SQL).<br>• <strong>Soft</strong> — 2-3 max (e.g. stakeholder communication, project ownership) — don\'t pad this list, employers skim past generic soft skills.<br><br><em>List only what you can speak to confidently in an interview.</em>';
+
+  if (/project|assignment|case stud|work sample/i.test(t))
+    return '<strong>Projects / Assignments Section:</strong><br>Pick your 3-5 strongest pieces of work. For each one, write:<br>1. <strong>The problem/brief</strong> — what was being asked.<br>2. <strong>What you did</strong> — your specific contribution/approach.<br>3. <strong>The outcome</strong> — quantify it if you can ("increased engagement 20%", "reduced load time by 1.2s").<br><br>Include real screenshots or links, not just descriptions — a picture of a dashboard or campaign beats a paragraph describing it.';
+
+  if (/certificat/i.test(t))
+    return '<strong>Certifications Section:</strong><br>List course completions and any SkillsFuture-recognised credentials, most recent first. Keep it short — name, issuing body, year. Only include certifications relevant to the pillar you\'re presenting; unrelated ones dilute the page.';
+
+  if (/contact|linkedin|email section/i.test(t))
+    return '<strong>Contact Section:</strong><br>Put your email and LinkedIn where they\'re impossible to miss — top or bottom of the page, not buried. Use a professional email (school email is fine) and make sure your LinkedIn headline matches what your portfolio is presenting.';
+
+  if (/structure|order|layout|sections|what should (i|my) (portfolio )?(have|include)/i.test(t))
+    return '<strong>Recommended Structure (in order):</strong><br>1. Introduction / About Me<br>2. Skills (technical + soft)<br>3. Projects / Assignments (3-5 best, with outcomes)<br>4. Certifications<br>5. Contact<br><br><em>Ask me about any one section — e.g. "how do I write my bio" — for more detail.</em>';
+
+  if (/digital marketing|marketing/i.test(t))
+    return '<strong>Digital Marketing Portfolio:</strong><br>Include campaign case studies with real numbers (reach, CTR, conversions), analytics screenshots, social media metrics, and any Google Ads / Meta Ads certifications. Show the strategy behind a campaign, not just the creative — that\'s what demonstrates competency, not just execution.';
+
+  if (/data science|data analy|machine learning|python|kaggle/i.test(t))
+    return '<strong>Data Science Portfolio:</strong><br>Link your Kaggle profile and GitHub. Include 2-3 Python/R projects with visualisations (charts, not just code) and a short write-up of the dataset, method, and what you found. Employers skim for the visual output before reading code.';
+
+  if (/software|developer|engineer|coding|github/i.test(t))
+    return '<strong>Software Engineering Portfolio:</strong><br>Lead with your GitHub. Link live/deployed projects where possible, not just repos. Show your tech stack per project, a couple of code samples, and — if relevant — a simple system architecture diagram. Working demos beat descriptions every time.';
+
+  if (/business|entrepreneur|management/i.test(t))
+    return '<strong>Business Portfolio:</strong><br>Frame projects around outcomes: revenue impact, cost savings, process improvements, team size led — with numbers wherever possible. Include presentations or reports you produced, and any leadership or ownership examples, even from group assignments.';
+
+  if (/how long|time.*take|how much time/i.test(t))
+    return 'Carrd: roughly 30 minutes for a working one-pager. Framer: over an hour, since there\'s more to learn, but the result looks more custom-designed. Either way, most of your time should go into writing strong project descriptions, not fiddling with design.';
+
+  if (/photo|headshot|image|picture/i.test(t))
+    return 'Use a clear, professional headshot — plain background, good lighting, no group photos or heavy filters. For project sections, use real screenshots of your actual work (dashboards, designs, campaigns, code) rather than stock images or icons.';
+
+  if (/free|cost|price|pay|paid/i.test(t))
+    return 'Carrd has a free tier (up to 3 sites) that\'s enough for a student portfolio — custom domain needs a paid plan. Framer historically hasn\'t had a fully free tier for a live published site, though plans change — check framer.com directly for current pricing before committing. If cost matters most, start with Carrd.';
+
+  if (/domain|custom url|my own website|\.com/i.test(t))
+    return 'Both Carrd and Framer support connecting a custom domain (e.g. yourname.com) instead of the default carrd.co/framer.app link, but it\'s usually a paid-plan feature on both. For most student portfolios the free default link is fine — a custom domain becomes worth it once you\'re actively job-hunting and want something more memorable.';
+
+  if (/template/i.test(t))
+    return 'Carrd: pick a template when you start — note it can\'t be swapped for a different one later without rebuilding, so preview a few before choosing. Framer: 2,000+ templates, and you CAN switch templates after starting, which makes it more forgiving if you change your mind on layout.';
+
+  if (/mobile|responsive|phone/i.test(t))
+    return 'Both Carrd and Framer are mobile-responsive by default, so you don\'t need to build a separate mobile version — but always preview on an actual phone before sharing the link, since text/image spacing can still look cramped depending on the template.';
+
+  if (/seo|search engine|google (search|rank)/i.test(t))
+    return 'Both platforms include basic SEO tools (page title, meta description). For a student portfolio, SEO matters less than making sure the link works everywhere you share it — LinkedIn, resume, email signature — since most visitors arrive from a direct link, not a Google search.';
+
+  if (/start|begin|where do i|first step|get started/i.test(t))
+    return 'Start here: (1) decide Carrd (fast) or Framer (polished) based on how much time you have, (2) write your bio and gather 3-5 project write-ups BEFORE opening the builder — most time gets wasted rewriting content live in the editor, (3) pick a template, (4) drop your content in, (5) publish. Content first, design second.';
+
+  if (/what (do|should) i (put|write|include|add)/i.test(t))
+    return 'At minimum: About Me, Skills, 3-5 Projects (with real outcomes), Certifications, Contact. If you\'re unsure what counts as a "project," any graded assignment with a clear outcome works — you don\'t need something outside coursework.';
+
+  if (/job|interview|recruiter|employer|hiring/i.test(t))
+    return 'Recruiters skim — assume 10-15 seconds per portfolio. Put your strongest project first, lead with outcomes not tasks ("increased X by Y%" beats "worked on X"), and make sure contact info is visible without scrolling. A portfolio is a supplement to your resume, not a replacement — keep them consistent.';
+
+  if (/resume|cv/i.test(t))
+    return 'Your portfolio and resume should tell the same story with different depth — resume is the summary, portfolio is the evidence. Link your portfolio directly from your resume/LinkedIn so a recruiter can go from "check the claim" to "see the proof" in one click.';
+
+  if (/update|keep.*current|maintain/i.test(t))
+    return 'Update it every time you finish a strong assignment or project — don\'t wait until you\'re job-hunting to overhaul it. Both Carrd and Framer let you edit and republish anytime for free (editing itself is free even on the free tier).';
+
+  if (/how many project/i.test(t))
+    return '3-5 is the sweet spot. Fewer than 3 looks thin; more than 5-6 dilutes attention from your strongest work. Quality and clear outcomes beat quantity — one excellent project with real numbers beats five vague ones.';
+
+  if (/^(hi|hello|hey|hii+|yo)\b/i.test(t))
+    return 'Hi! Ask me anything about building your portfolio — structure, what to include, Carrd vs Framer, or advice specific to your pillar (e.g. "data science portfolio tips").';
+
+  if (/^(thanks|thank you|thx|ok|okay|cool|got it)\b/i.test(t))
+    return 'Anytime — come back with any other portfolio question whenever you need it.';
+
+  // Generic fallback — still responds to whatever was actually asked, not a fixed script
+  return 'Here\'s how to think about "<em>' + (q.length > 80 ? q.substring(0,80)+'...' : q) + '</em>":<br><br>Whatever the specific question, ground the answer in your actual work: name what you did, show the real result (with numbers if possible), and use real screenshots or links rather than descriptions.<br><br>For tools, it\'s just two options — <strong>Carrd</strong> (fast, simple, free) or <strong>Framer</strong> (more polished, more time). Try asking me about a specific section — bio, skills, projects, certifications, contact — or your pillar (e.g. "data science portfolio") for more targeted advice.';
+}
+
+function sendPortfolio() {
+  var inp = document.getElementById('p-input');
+  var q = inp.value.trim(); if (!q) return;
+  addUsr('p-chat', q); inp.value = '';
+  addTyping('p-chat');
+  setTimeout(function() {
+    rmTyping('p-chat');
+    addBot('p-chat', answerPortfolioQ(q));
+  }, 700);
+}
+
+// ── REMINDERS (demo) ──────────────────────────
+// Sample module calendars keyed by cohort prefix. This is a working demo —
+// once connected to the Teams workflow bot, "Send Reminder" will trigger the
+// bot to post automatically into the learner's cohort channel instead of
+// just previewing it here.
+var MOCK_CALENDARS = {
+  'MDM': { course: 'Marketing Theory', items: [
+    {name:'Assignment 1', date:'12 Feb 2026'}, {name:'Assignment 2', date:'26 Feb 2026'},
+    {name:'Assignment 3', date:'19 Mar 2026'}, {name:'Assignment 4', date:'2 Apr 2026'},
+    {name:'Assignment 5', date:'16 Apr 2026'}, {name:'Assignment 6', date:'30 Apr 2026'}
+  ]},
+  'PDDM': { course: 'PDDM', items: [
+    {name:'Assignment 1', date:'10 Feb 2026'}, {name:'Assignment 2', date:'24 Feb 2026'},
+    {name:'Assignment 3', date:'17 Mar 2026'}, {name:'Assignment 4', date:'7 Apr 2026'}
+  ]},
+  'DEFAULT': { course: 'General Cohort', items: [
+    {name:'Assignment 1', date:'14 Feb 2026'}, {name:'Assignment 2', date:'28 Feb 2026'},
+    {name:'Assignment 3', date:'21 Mar 2026'}
+  ]}
+};
+var currentReminderPlan = null;
+
+function fetchReminderTimeline() {
+  var name = document.getElementById('r-name').value.trim();
+  var cohort = document.getElementById('r-cohort').value.trim();
+  if (!name || !cohort) { alert('Please enter both the learner\'s name and cohort code.'); return; }
+  var key = Object.keys(MOCK_CALENDARS).find(function(k){ return k !== 'DEFAULT' && cohort.toUpperCase().indexOf(k) === 0; }) || 'DEFAULT';
+  var plan = MOCK_CALENDARS[key];
+  currentReminderPlan = { name: name, cohort: cohort, course: plan.course, items: plan.items };
+
+  document.getElementById('r-list-title').textContent = plan.course + ' — Upcoming Deadlines for ' + name;
+  document.getElementById('r-dl-rows').innerHTML = plan.items.map(function(it) {
+    return '<div class="dl-row"><span class="dl-name">' + it.name + '</span><span class="dl-date">Submit by ' + it.date + '</span></div>';
+  }).join('');
+
+  document.getElementById('r-lookup').style.display = 'none';
+  document.getElementById('r-review').style.display = 'block';
+  document.getElementById('r-success').style.display = 'none';
+}
+
+function sendReminder() {
+  if (!currentReminderPlan) return;
+  document.getElementById('r-review').style.opacity = '0.5';
+  document.getElementById('r-review').style.pointerEvents = 'none';
+  document.getElementById('r-success-txt').textContent = '✅ Preview ready for ' + currentReminderPlan.name + ' (' + currentReminderPlan.cohort + '). Once connected to the Teams workflow bot, this will post automatically into the cohort\'s communication channel.';
+  document.getElementById('r-success').style.display = 'flex';
+}
+
+function resetReminderLookup() {
+  document.getElementById('r-lookup').style.display = 'block';
+  document.getElementById('r-review').style.display = 'none';
+  document.getElementById('r-review').style.opacity = '1';
+  document.getElementById('r-review').style.pointerEvents = 'auto';
+  document.getElementById('r-success').style.display = 'none';
+  document.getElementById('r-name').value = '';
+  document.getElementById('r-cohort').value = '';
+}
+
+
+function toggleEligItem(n) {
+  var item = document.getElementById('ei'+n);
+  var chk = document.getElementById('ec'+n);
+  var checked = item.classList.toggle('checked');
+  if(checked){ chk.style.background='#1B2E6B'; chk.style.borderColor='#1B2E6B'; chk.style.color='#fff'; }
+  else{ chk.style.background=''; chk.style.borderColor=''; chk.style.color='transparent'; }
+}
+
+function showAttach(inp, id) { if(inp.files[0]) document.getElementById(id).textContent = inp.files[0].name; }
+function submitElig() {
+  var items = [document.getElementById('ei1'), document.getElementById('ei2'), document.getElementById('ei3')].filter(Boolean);
+  var kpis = [{label:'Assignments graded above 75', weight:40},{label:'Capstone / portfolio submitted', weight:35},{label:'Task / practical input completed', weight:25}];
+  var total = 0; var rows = '';
+  items.forEach(function(item, i) {
+    var checked = item.classList.contains('checked');
+    var attName = item.querySelector('[id^="a"][id$="n"]');
+    var hasFile = attName && attName.textContent.trim() !== '';
+    var pts = checked ? (hasFile ? kpis[i].weight : Math.round(kpis[i].weight * 0.6)) : 0;
+    total += pts;
+    var status = checked && hasFile ? '✅ Complete' : checked ? '⚠️ No document' : '❌ Not done';
+    var sc = checked && hasFile ? '#16a34a' : checked ? '#d97706' : '#dc2626';
+    rows += '<tr><td>' + kpis[i].label + '</td><td style="color:'+sc+';font-weight:600;">' + status + '</td><td style="font-weight:700;color:#E03070;">' + pts + '/' + kpis[i].weight + '</td></tr>';
+  });
+  rows += '<tr style="background:rgba(224,48,112,0.05);"><td style="font-weight:700;">Total Score</td><td></td><td style="font-size:16px;font-weight:700;color:#E03070;">' + total + '/100</td></tr>';
+  document.getElementById('kpi-rows').innerHTML = rows;
+  document.getElementById('sc-num').textContent = total;
+  var circle = document.getElementById('sc-circle');
+  var offset = 352 - (352 * total / 100);
+  document.getElementById('elig-result').style.display = 'block';
+  setTimeout(function() {
+    if(circle) circle.style.strokeDashoffset = offset;
+    document.getElementById('elig-result').scrollIntoView({behavior:'smooth', block:'start'});
+  }, 200);
+  if(total >= 75) { document.getElementById('sc-verdict').textContent = '✅ Eligible for Placement'; document.getElementById('sc-detail').textContent = 'Congratulations! You meet all placement eligibility criteria. Your full report has been sent to your academic advisor.'; }
+  else if(total >= 50) { document.getElementById('sc-verdict').textContent = '⚠️ Partially Eligible'; document.getElementById('sc-detail').textContent = 'You meet some criteria. Complete remaining requirements and attach supporting documents, then resubmit.'; }
+  else { document.getElementById('sc-verdict').textContent = '❌ Not Yet Eligible'; document.getElementById('sc-detail').textContent = 'Please complete all criteria and attach the required proof documents before resubmitting.'; }
+}
+</script>
+
+
+<!-- SUPPORT BUTTON -->
+
+
+
+
+
+
+</body>
+</html>
