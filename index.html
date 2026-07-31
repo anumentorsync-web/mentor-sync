@@ -662,7 +662,7 @@ footer span { color: #fff; font-weight: 600; }
           <div class="card-desc">Upload your assignment or ask a question. Get structured feedback instantly — no external API or key needed.</div>
           <div class="card-feats">
             <div class="card-feat"><div class="feat-dot">✓</div>Areas for Improvement</div>
-            <div class="card-feat"><div class="feat-dot">✓</div>Estimated Grade / 100</div>
+            <div class="card-feat"><div class="feat-dot">✓</div>Content-Specific Fixes</div>
             <div class="card-feat"><div class="feat-dot">✓</div>Upload PDF, DOCX, PPT, Images</div>
             <div class="card-feat"><div class="feat-dot">✓</div>Download feedback report</div>
           </div>
@@ -841,12 +841,12 @@ footer span { color: #fff; font-weight: 600; }
     <div id="f-main" style="display:none;">
       <label class="upload-lbl">
         <div class="upload-icon">📄</div>
-        <div class="upload-txt">Tap to upload your assignment<br><small style="color:var(--muted);font-size:12px;">Auto-read: PDF · DOCX · TXT — other formats: paste text below instead</small></div>
+        <div class="upload-txt">Tap to upload your assignment<br><small style="color:var(--muted);font-size:12px;">Supported documents: PDF, DOCX, PPT, Text</small></div>
         <input type="file" accept="*/*" onchange="handleUpload(this)">
       </label>
       <div class="file-chip" id="f-chip">📎 <span id="f-fname"></span></div>
       <div class="chat-area" id="f-chat">
-        <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot">Upload your assignment or type a specific question. I will provide Areas for Improvement and an Estimated Grade.</div></div>
+        <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot">Upload your assignment or type a specific question. I will read the actual content and give you Areas for Improvement.</div></div>
       </div>
       <button class="dl-btn" id="f-dlbtn" onclick="doDownload()">⬇ Download Feedback</button>
       <div class="input-row" style="margin-top:12px;">
@@ -886,6 +886,12 @@ footer span { color: #fff; font-weight: 600; }
     </div>
     <!-- PORTFOLIO SCREEN -->
     <div id="p-main" style="display:none;">
+      <label class="upload-lbl" style="margin-bottom:12px;">
+        <div class="upload-icon">📄</div>
+        <div class="upload-txt">Tap to upload your portfolio / supporting doc<br><small style="color:var(--muted);font-size:12px;">Supported: PDF, DOCX, PPTX, Text</small></div>
+        <input type="file" accept="*/*" onchange="handleUpload(this,'portfolio')">
+      </label>
+      <div class="file-chip" id="p-chip" style="display:none;">📎 <span id="p-fname"></span></div>
       <div class="chat-area" id="p-chat">
         <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot">Here is your portfolio guidance for EduClaas learners.</div></div>
         <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot"><strong>Recommended Structure:</strong><br>1. Introduction / About Me — a 3–4 sentence bio: who you are, your pillar (e.g. Digital Marketing, Data Science, Software Development), and what you're aiming for.<br>2. Skills — separate technical skills (tools, languages, frameworks) from soft skills.<br>3. Projects / Assignments — your 3–5 strongest pieces of work, each with the problem, what you did, and the outcome (quantify it where you can, e.g. "increased engagement by 20%").<br>4. Certifications — course completions, SkillsFuture-recognised credentials, any external certs.<br>5. Contact — email and LinkedIn, clearly visible, no digging required.</div></div>
@@ -1112,7 +1118,7 @@ function openPage(id) {
     var fc = document.getElementById('f-chat');
     if (fc && fc.children.length <= 1) {
       var u = loadUser();
-      var msg = u.n ? ('Hi ' + u.n + '! Upload your assignment or ask me any question.') : 'Upload your assignment or ask me any question. I will provide Areas for Improvement and an Estimated Grade.';
+      var msg = u.n ? ('Hi ' + u.n + '! Upload your assignment or ask me any question.') : 'Upload your assignment or ask me any question. I will read the actual content and give you Areas for Improvement.';
       addBot('f-chat', msg);
     }
   }
@@ -1282,7 +1288,7 @@ function startFeedback() {
   document.getElementById('f-capture').style.display = 'none';
   document.getElementById('f-main').style.display = 'block';
   saveLearnerActivity(email, name, 'Assignment Feedback');
-  addBot('f-chat', 'Hi ' + name + '! Upload your assignment or type a specific question. I will provide Areas for Improvement and an Estimated Grade.');
+  addBot('f-chat', 'Hi ' + name + '! Upload your assignment or type a specific question. I will read the actual content and give you Areas for Improvement.');
 }
 
 function startPortfolio() {
@@ -1309,11 +1315,15 @@ function startEligibility() {
 // Reset capture screens when page closes - handled by closePage()
 
 // ── CHAT HELPERS ──────────────────────────────
-function addBot(chatId, html) {
+function addBot(chatId, html, bubId) {
   var c = document.getElementById(chatId);
   var d = document.createElement('div'); d.className = 'cm';
-  d.innerHTML = '<div class="cm-av bot">M</div><div class="cm-bub bot">' + html + '</div>';
+  d.innerHTML = '<div class="cm-av bot">M</div><div class="cm-bub bot"' + (bubId ? ' id="' + bubId + '"' : '') + '>' + html + '</div>';
   c.appendChild(d); c.scrollTop = c.scrollHeight;
+}
+function updateBot(bubId, html) {
+  var el = document.getElementById(bubId);
+  if (el) el.innerHTML = html;
 }
 function addUsr(chatId, txt) {
   var c = document.getElementById(chatId);
@@ -1346,64 +1356,198 @@ function trimQuote(s, n) {
   return s.length > n ? s.substring(0, n).trim() + '…' : s;
 }
 
-function analyseText(text) {
+// Cover sheets, declaration pages, and submission checklists get extracted
+// as real text alongside the actual essay — without filtering them out,
+// "opening/closing quote" logic ends up quoting admin fields (learner name,
+// NRIC, "submit to Learning Associate") instead of the real content.
+var BOILERPLATE_LINE_PATTERNS = [
+  /^learner('?s)? name\s*:/i, /^student('?s)? (name|id|no)\s*:/i, /^nric\s*:?/i,
+  /^module (code|name|title)\s*:/i, /^assessment (code|title|no)\s*:/i,
+  /^course (code|name|title)\s*:/i, /^cohort\s*:/i, /^intake\s*:/i,
+  /^date of submission\s*:/i, /^submission date\s*:/i, /^due date\s*:/i,
+  /^signature\s*:?/i, /^declaration\b/i, /^word count\s*:/i, /^total marks\s*:/i,
+  /^page \d+ of \d+$/i, /^table of contents$/i,
+  /^\d+\.\s*(check|submit|attach|upload|ensure|complete)\b.*(form|la\b|learning associate)/i,
+  /learning associate\s*\(la\)/i,
+  /^i (declare|confirm|certify) that this/i,
+  /^plagiarism (declaration|statement)/i,
+];
+
+function stripBoilerplate(text) {
+  // Fix PDF layout-extraction artifacts: hyphenated compound words often come
+  // out as "mid - sized" (stray spaces around the hyphen) because the extractor
+  // treats the hyphen as its own text item. Collapse that back to "mid-sized"
+  // whenever it's flanked by ordinary letters on both sides.
+  text = text.replace(/([a-zA-Z])\s-\s([a-zA-Z])/g, '$1-$2');
+  var lines = text.split('\n');
+  var kept = lines.filter(function(line) {
+    var t = line.trim();
+    if (!t) return true; // preserve blank lines for paragraph breaks
+    return !BOILERPLATE_LINE_PATTERNS.some(function(re) { return re.test(t); });
+  });
+  return kept.join('\n');
+}
+
+function pickSubstantiveParagraph(paragraphs, fromEnd) {
+  var list = fromEnd ? paragraphs.slice().reverse() : paragraphs;
+  for (var i = 0; i < list.length; i++) {
+    var wc = list[i].split(/\s+/).filter(Boolean).length;
+    if (wc >= 15) return list[i];
+  }
+  return list[0] || '';
+}
+
+// Safety net: if paragraph detection still comes out too fine-grained (e.g. an
+// unusual PDF layout that fools the line-spacing heuristic and yields one
+// "paragraph" per line), re-chunk into blocks of roughly 45 words so paragraph
+// counts and balance checks always stay meaningful instead of showing something
+// like "344 paragraphs" for a 3,700-word document.
+function normalizeParagraphs(paragraphs, wc) {
+  if (!paragraphs.length) return paragraphs;
+  var avgWordsPerPara = wc / paragraphs.length;
+  if (avgWordsPerPara >= 12) return paragraphs;
+  var merged = [];
+  var buffer = [];
+  var bufferWords = 0;
+  paragraphs.forEach(function(p) {
+    buffer.push(p);
+    bufferWords += p.split(/\s+/).filter(Boolean).length;
+    if (bufferWords >= 45) {
+      merged.push(buffer.join(' '));
+      buffer = [];
+      bufferWords = 0;
+    }
+  });
+  if (buffer.length) merged.push(buffer.join(' '));
+  return merged;
+}
+
+// Common English function words — excluded so topic extraction surfaces the
+// document's actual subject matter, not filler words.
+var STOPWORDS = ['the','and','that','this','with','from','have','has','had','are','was','were','been','being',
+  'for','not','but','they','their','them','then','than','into','also','such','when','where','which','who','whom',
+  'what','why','how','will','would','could','should','about','over','under','between','within','across','through',
+  'while','because','however','therefore','thus','hence','these','those','there','here','some','more','most','many',
+  'much','each','every','both','either','neither','other','another','same','very','just','only','even','still',
+  'yet','ever','never','always','often','again','once','upon','after','before','above','below','without','against',
+  'during','among','around','toward','towards','including','include','includes','based','used','using','use',
+  'does','done','make','made','can','may','might','must','shall','one','two','three','first','second','third',
+  'you','your','yours','our','ours','its','his','her','she','him','them','itself','into','onto','per','via'];
+
+function extractKeyTerms(text, n) {
+  n = n || 4;
+  var words = text.toLowerCase().replace(/[^a-z\s\-]/g, ' ').split(/\s+/)
+    .filter(function(w) { return w.length > 5 && STOPWORDS.indexOf(w) === -1; });
+  var freq = {};
+  words.forEach(function(w) { freq[w] = (freq[w] || 0) + 1; });
+  return Object.keys(freq)
+    .filter(function(w) { return freq[w] > 1; })
+    .sort(function(a, b) { return freq[b] - freq[a]; })
+    .slice(0, n);
+}
+
+function analyseText(rawText) {
+  var text = stripBoilerplate(rawText);
   var words = text.split(/\s+/).filter(function(w){return w.length>0;});
   var wc = words.length;
   var sentences = splitSentences(text);
-  var paragraphs = splitParagraphs(text);
+  var paragraphs = normalizeParagraphs(splitParagraphs(text), wc);
   var avgSentLen = sentences.length ? Math.round(wc / sentences.length) : 0;
+  var openPara = pickSubstantiveParagraph(paragraphs, false);
+  var closePara = pickSubstantiveParagraph(paragraphs, true);
+  var keyTerms = extractKeyTerms(text, 4);
 
-  var hasRef = /\([A-Z][a-zA-Z\-]+,?\s*\d{4}\)|reference list|bibliography|et al\.?|doi:/i.test(text);
   var hasConc = /\b(conclusion|in summary|to conclude|overall|in conclusion|to sum up)\b/i.test(text.slice(-400));
-  var hasIntro = paragraphs.length > 0 && /\b(this (essay|assignment|report|paper)|this study|the aim of this|this discussion)\b/i.test(paragraphs[0]);
+  var hasIntro = !!openPara && /\b(this (essay|assignment|report|paper)|this study|the aim of this|this discussion)\b/i.test(openPara);
   var hasCritical = /\b(however|although|on the other hand|in contrast|whereas|a limitation|counter-argument|arguably|it could be argued)\b/i.test(text);
   var hasExamples = /\b(for example|for instance|such as|e\.g\.|specifically|namely|case in point)\b/i.test(text);
   var hasTheory = /\b(theory|framework|model|according to|literature|research (shows|suggests|indicates))\b/i.test(text);
+  var hasTransitions = /\b(firstly|secondly|thirdly|moreover|furthermore|in addition|consequently|as a result|subsequently|finally|next,)\b/i.test(text);
+  var hasNumbers = /\d/.test(text);
 
-  var issues = [];
+  // Paragraph balance — is one paragraph doing most of the work?
+  var paraWordCounts = paragraphs.map(function(p){ return p.split(/\s+/).filter(Boolean).length; });
+  var maxParaWords = paraWordCounts.length ? Math.max.apply(null, paraWordCounts) : 0;
+  var paraImbalanced = paragraphs.length >= 3 && wc > 0 && (maxParaWords / wc) > 0.5;
 
-  if (!hasIntro) {
-    issues.push('Your opening paragraph doesn\'t clearly state what the assignment will cover. Start with a sentence that names the topic and your position/approach, e.g. "This assignment examines... by analysing... and argues that..."' + (paragraphs[0] ? ' Right now it opens with: "' + trimQuote(paragraphs[0], 110) + '"' : ''));
-  }
-  if (!hasRef) {
-    issues.push('No in-text citations were detected (e.g. "(Author, Year)"). Every claim that isn\'t your own original observation needs a source — add citations in APA or Harvard format and a matching reference list at the end.');
+  // Passive voice ratio (approximate: "is/was/were/been/being + ___ed")
+  var passiveMatches = (text.match(/\b(am|is|are|was|were|be|been|being)\s+\w+ed\b/gi) || []).length;
+  var passiveHeavy = sentences.length >= 5 && (passiveMatches / sentences.length) > 0.3;
+
+  // Repetitive sentence openers
+  var openerFreq = {};
+  sentences.forEach(function(s) {
+    var w = s.trim().split(/\s+/)[0];
+    if (w) { w = w.toLowerCase().replace(/[^a-z]/g, ''); if (w) openerFreq[w] = (openerFreq[w] || 0) + 1; }
+  });
+  var maxOpener = Object.keys(openerFreq).reduce(function(m, k) { return Math.max(m, openerFreq[k]); }, 0);
+  var repetitiveOpeners = sentences.length >= 6 && (maxOpener / sentences.length) > 0.3;
+
+  // Vocabulary variety (type-token ratio on words longer than 3 chars)
+  var longWords = words.map(function(w){return w.toLowerCase().replace(/[^a-z]/g,'');}).filter(function(w){return w.length>3;});
+  var uniqueLongWords = {}; longWords.forEach(function(w){ uniqueLongWords[w] = true; });
+  var ttr = longWords.length ? Object.keys(uniqueLongWords).length / longWords.length : 1;
+  var lowVariety = wc > 150 && ttr < 0.4;
+
+  // Each check: ok = passes, issue/affirm = specific text pulled from the actual document.
+  var checks = [
+    { ok: hasIntro,
+      issue: 'The opening paragraph doesn\'t clearly state what this specific assignment will cover' + (openPara ? '; right now it starts: "' + trimQuote(openPara, 100) + '"' : '') + ' — open with a sentence naming the topic and your position.',
+      affirm: 'The opening clearly frames what the assignment covers — keep that.' },
+    { ok: hasConc,
+      issue: 'The submission doesn\'t clearly close with a conclusion' + (closePara ? '; it currently ends: "' + trimQuote(closePara, 100) + '"' : '') + ' — end with a paragraph that restates your argument and directly answers the question asked.',
+      affirm: 'A conclusion is present — make sure it synthesises the argument rather than repeating the introduction.' },
+    { ok: hasCritical,
+      issue: 'The writing reads as mostly descriptive rather than evaluative — add language like "however," "a limitation of this is," or "an alternative view is" after your key points.',
+      affirm: 'Evaluative language (e.g. "however," "a limitation of this is") is present — good, the writing goes beyond pure description.' },
+    { ok: hasExamples,
+      issue: 'Few concrete examples or specifics were found — attach a real case, figure, or instance to your main claims rather than leaving them abstract.',
+      affirm: 'Concrete examples are used to support claims — keep grounding each point this way.' },
+    { ok: hasTheory,
+      issue: 'Points aren\'t explicitly tied to a named theory, framework, or model — name one, define it briefly, then apply it to this specific topic.',
+      affirm: 'Claims are tied to named theory/framework language — make sure each one is properly applied, not just name-dropped.' },
+    { ok: !paraImbalanced,
+      issue: 'One paragraph carries over half the total word count (' + maxParaWords + ' of ' + wc + ' words) — break it up so ideas are distributed more evenly across the piece.',
+      affirm: 'Paragraph length is reasonably balanced across the submission — good pacing.' },
+    { ok: hasTransitions,
+      issue: 'Few signposting words (e.g. "firstly," "moreover," "as a result") were found — add these between paragraphs so the reader can follow the logical flow.',
+      affirm: 'Signposting words are used between points — this helps the reader follow your logic.' },
+    { ok: avgSentLen <= 30,
+      issue: 'Average sentence length is around ' + avgSentLen + ' words — several sentences are likely running too long; split dense ones for clarity.',
+      affirm: 'Average sentence length (~' + avgSentLen + ' words) is easy to follow — good readability.' },
+    { ok: !passiveHeavy,
+      issue: 'Passive voice appears frequently (e.g. "was conducted," "is shown") — switch a portion of these to active voice ("we conducted," "the data shows") for more direct writing.',
+      affirm: 'The writing mostly uses active voice — that reads more directly than passive-heavy prose.' },
+    { ok: !repetitiveOpeners,
+      issue: 'Several sentences in a row start with the same word — vary your sentence openers so the writing doesn\'t feel repetitive.',
+      affirm: 'Sentence openers are varied — this keeps the writing from feeling repetitive.' },
+    { ok: !lowVariety,
+      issue: 'Vocabulary is fairly repetitive across the piece — swap in synonyms for words you\'ve reused often to sharpen precision.',
+      affirm: 'Vocabulary range is healthy across the piece — you\'re not leaning on the same few words.' },
+    { ok: hasNumbers,
+      issue: 'No numbers, dates, or figures were found anywhere in the text — if the topic allows it, a statistic, date, or data point would strengthen your claims.',
+      affirm: 'Quantifiable detail (numbers/figures/dates) is present — this adds concreteness to your claims.' },
+    { ok: wc >= 300,
+      issue: 'At ~' + wc + ' words this looks short for a full assignment — check it against the required word count.',
+      affirm: 'Length (~' + wc + ' words) looks like a reasonable amount of substance for a full submission.' }
+  ];
+
+  var issueLines = checks.filter(function(c){ return !c.ok; }).map(function(c){ return c.issue; });
+  var affirmLines = checks.filter(function(c){ return c.ok; }).map(function(c){ return c.affirm; });
+
+  // Guarantee 8-10 lines: lead with real issues, top up with real (document-specific)
+  // strengths if there aren't enough issues to reach the target.
+  var body = issueLines.concat(affirmLines).slice(0, 9);
+
+  var lines = [];
+  if (keyTerms.length >= 2) {
+    lines.push('This submission (~' + wc + ' words, ' + paragraphs.length + ' paragraphs) is built around ' + keyTerms.slice(0, 3).join(', ') + ' — keep every section tied back to these, and cut anything that drifts into unrelated background.');
   } else {
-    issues.push('Citations are present — double-check every in-text citation has a matching entry in your reference list, and that the formatting (APA or Harvard) is consistent throughout.');
+    lines.push('This submission runs ~' + wc + ' words across ' + paragraphs.length + ' paragraphs.');
   }
-  if (!hasCritical) {
-    issues.push('The writing reads as mostly descriptive. Add critical language — words like "however," "a limitation of this is," or "an alternative view is" — after your key claims to show evaluation, not just description.');
-  }
-  if (!hasExamples) {
-    issues.push('Few concrete examples were found. Abstract claims are more convincing with a specific example, case, or data point attached to them — add at least one per major point.');
-  }
-  if (!hasConc) {
-    issues.push('The submission doesn\'t clearly close with a conclusion. End with a paragraph that restates your main argument and directly answers the question that was asked — don\'t just stop after your last point.' + (paragraphs.length ? ' It currently ends with: "' + trimQuote(paragraphs[paragraphs.length-1], 110) + '"' : ''));
-  } else {
-    issues.push('A conclusion is present — make sure it synthesises your argument rather than just repeating your introduction word-for-word.');
-  }
-  if (avgSentLen > 30) {
-    issues.push('Average sentence length is around ' + avgSentLen + ' words — several sentences may be running too long. Break dense sentences into two for clarity.');
-  }
-  if (!hasTheory) {
-    issues.push('Ground your points more explicitly in course theory or established models — name the framework, define it briefly, then apply it to your specific topic.');
-  }
+  lines = lines.concat(body);
 
-  var wcNote = wc < 300 ? 'This looks short for a full assignment (' + wc + ' words) — check the word count requirement.' : null;
-  if (wcNote) issues.unshift(wcNote);
-
-  var score = 58;
-  if (wc > 600) score += 4; if (wc > 1200) score += 4;
-  if (hasRef) score += 8; if (hasConc) score += 5; if (hasIntro) score += 4;
-  if (hasCritical) score += 8; if (hasExamples) score += 6; if (hasTheory) score += 5;
-  score = Math.min(score, 89);
-
-  var just = score >= 80 ? 'Well-structured with clear argumentation. The remaining gaps below are refinements, not rewrites.'
-    : score >= 68 ? 'Solid foundation — the issues below are the main things holding the grade back.'
-    : 'The structural and evidentiary gaps below need to be addressed before this is submission-ready.';
-
-  var out = 'Areas for Improvement (based on your actual submission)\n• ' + issues.slice(0, 5).join('\n• ');
-  out += '\n\nStats: ' + wc + ' words · ' + sentences.length + ' sentences · ' + paragraphs.length + ' paragraph(s) · avg ' + avgSentLen + ' words/sentence.';
-  out += '\n\nEstimated Grade\n' + score + '/100 — ' + just;
+  var out = 'Areas for Improvement (based on your actual submission)\n• ' + lines.join('\n• ');
   return out;
 }
 
@@ -1460,34 +1604,130 @@ function looksLikeGarbage(text) {
   return (printable / sample.length) < 0.7; // more than 30% non-printable = binary garbage
 }
 
-async function handleUpload(inp) {
+async function ensureJSZip() {
+  if (typeof JSZip !== 'undefined') return;
+  await new Promise(function(res, rej) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    s.onload = res; s.onerror = rej; document.head.appendChild(s);
+  });
+}
+
+async function extractPdfText(f) {
+  if (typeof pdfjsLib === 'undefined') {
+    await new Promise(function(res, rej) {
+      var s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      s.onload = function() { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; res(); };
+      s.onerror = rej; document.head.appendChild(s);
+    });
+  }
+  var ab = await f.arrayBuffer();
+  // Suppress PDF.js's internal warning-level console output (e.g. "Setting up
+  // fake worker", "TT: undefined function") — harmless internals, not real
+  // errors, but confusing to see in any visible console. verbosity:0 tells
+  // PDF.js to only surface true errors; the console.warn override below is a
+  // second safety net in case any warning still slips through.
+  var originalWarn = console.warn;
+  console.warn = function() {};
+  var pdf, text = '';
+  try {
+    pdf = await pdfjsLib.getDocument({data: ab, verbosity: 0}).promise;
+    for (var i = 1; i <= pdf.numPages; i++) {
+      var pg = await pdf.getPage(i);
+      var ct = await pg.getTextContent();
+      // Layout-aware join: text items on the same line (similar y) get joined with a
+      // space; a line break in y starts a new line. Paragraph breaks are detected
+      // RELATIVE to this page's own typical line spacing (not a fixed pixel guess) —
+      // a fixed threshold broke on double-spaced documents, where every ordinary line
+      // gap exceeded the threshold and got treated as a new paragraph.
+      var ys = [];
+      ct.items.forEach(function(item) { if (item.str && item.str.trim()) ys.push(item.transform[5]); });
+      var lineGaps = [];
+      for (var k = 1; k < ys.length; k++) {
+        var g = Math.abs(ys[k] - ys[k - 1]);
+        if (g > 1 && g < 60) lineGaps.push(g);
+      }
+      lineGaps.sort(function(a, b) { return a - b; });
+      var typicalLineGap = lineGaps.length ? lineGaps[Math.floor(lineGaps.length / 2)] : 14;
+      var paraThreshold = Math.max(typicalLineGap * 1.6, typicalLineGap + 6);
+
+      var lastY = null;
+      ct.items.forEach(function(item) {
+        var y = item.transform[5];
+        if (lastY !== null) {
+          var gap = Math.abs(y - lastY);
+          if (gap > paraThreshold) text += '\n\n';
+          else if (gap > 3) text += '\n';
+          else text += ' ';
+        }
+        text += item.str;
+        lastY = y;
+      });
+      text += '\n\n';
+    }
+  } finally {
+    console.warn = originalWarn;
+  }
+  return text;
+}
+
+async function extractPptxText(f) {
+  await ensureJSZip();
+  var ab = await f.arrayBuffer();
+  var zip = await JSZip.loadAsync(ab);
+  var slideFiles = Object.keys(zip.files).filter(function(n) { return /^ppt\/slides\/slide\d+\.xml$/.test(n); });
+  slideFiles.sort(function(a, b) {
+    var na = parseInt(a.match(/slide(\d+)\.xml/)[1], 10);
+    var nb = parseInt(b.match(/slide(\d+)\.xml/)[1], 10);
+    return na - nb;
+  });
+  var text = '';
+  for (var i = 0; i < slideFiles.length; i++) {
+    var xml = await zip.files[slideFiles[i]].async('text');
+    var matches = xml.match(/<a:t>([^<]*)<\/a:t>/g) || [];
+    var slideText = matches.map(function(m) { return m.replace(/<a:t>/, '').replace(/<\/a:t>/, ''); }).join(' ');
+    if (slideText.trim()) text += 'Slide ' + (i + 1) + ': ' + slideText + '\n\n';
+  }
+  return text;
+}
+
+var lastFeedbackText = '';   // raw text extracted from last uploaded assignment
+var lastPortfolioDoc = '';   // raw text extracted from last uploaded portfolio doc
+
+// Picks the first substantive paragraph as a short excerpt, for a quick
+// "here's what I read" acknowledgment before the full analysis/answer.
+function summariseDoc(text, maxChars) {
+  maxChars = maxChars || 260;
+  if (!text || !text.trim()) return '';
+  var paras = text.split(/\n\s*\n/).map(function(p){ return p.replace(/\s+/g, ' ').trim(); }).filter(Boolean);
+  var pick = paras.length ? paras[0] : text;
+  pick = pick.length > maxChars ? pick.substring(0, maxChars).trim() + '…' : pick;
+  var words = text.split(/\s+/).filter(Boolean).length;
+  return 'Document summary — ' + words + ' words. Excerpt: "' + pick + '"';
+}
+
+async function handleUpload(inp, context) {
+  context = context || 'feedback';
+  var isPortfolio = context === 'portfolio';
+  var chatId = isPortfolio ? 'p-chat' : 'f-chat';
+  var fnameId = isPortfolio ? 'p-fname' : 'f-fname';
+  var chipId = isPortfolio ? 'p-chip' : 'f-chip';
+
   if (!inp.files || !inp.files[0]) return;
   var f = inp.files[0];
-  document.getElementById('f-fname').textContent = f.name;
-  document.getElementById('f-chip').style.display = 'flex';
-  addBot('f-chat', '📎 Received: <strong>' + f.name + '</strong>. Reading and analysing...');
-  addTyping('f-chat');
+  document.getElementById(fnameId).textContent = f.name;
+  document.getElementById(chipId).style.display = 'flex';
+  addBot(chatId, '📎 Received: <strong>' + f.name + '</strong>. Reading' + (isPortfolio ? ' document to ground future answers...' : ' and analysing...'));
+  addTyping(chatId);
   var ext = f.name.split('.').pop().toLowerCase();
   try {
     var text = '';
     var unsupported = false;
+    var unsupportedMsg = null;
 
     if (ext === 'pdf') {
-      if (typeof pdfjsLib === 'undefined') {
-        await new Promise(function(res, rej) {
-          var s = document.createElement('script');
-          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-          s.onload = function() { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; res(); };
-          s.onerror = rej; document.head.appendChild(s);
-        });
-      }
-      var ab = await f.arrayBuffer();
-      var pdf = await pdfjsLib.getDocument({data: ab}).promise;
-      for (var i = 1; i <= pdf.numPages; i++) {
-        var pg = await pdf.getPage(i);
-        var ct = await pg.getTextContent();
-        text += ct.items.map(function(x){return x.str;}).join(' ') + '\n';
-      }
+      text = await extractPdfText(f);
 
     } else if (ext === 'docx') {
       if (typeof mammoth === 'undefined') {
@@ -1501,36 +1741,74 @@ async function handleUpload(inp) {
       var res2 = await mammoth.extractRawText({arrayBuffer: ab2});
       text = res2.value;
 
-    } else if (ext === 'doc' || ext === 'ppt' || ext === 'pptx' || ext === 'xls' || ext === 'xlsx') {
-      unsupported = true;
+    } else if (ext === 'pptx') {
+      text = await extractPptxText(f);
 
-    } else if (f.type.startsWith('image/')) {
+    } else if (ext === 'doc' || ext === 'ppt') {
+      // NOTE: kept from the existing implementation — the suggested version fell through to
+      // reading these as plain text, which silently feeds binary garbage into the analyser.
       unsupported = true;
+      unsupportedMsg = 'The older <strong>.' + ext + '</strong> format (pre-2007 Office) can\'t be read automatically. Please save/export it as <strong>.' + (ext === 'doc' ? 'docx' : 'pptx') + '</strong> and re-upload, or paste your text directly below.';
+
+    } else if (ext === 'xls' || ext === 'xlsx') {
+      unsupported = true;
+      unsupportedMsg = 'Spreadsheet files aren\'t supported for text analysis — please paste the relevant text directly below.';
+
+    } else if (f.type && f.type.startsWith('image/')) {
+      unsupported = true;
+      unsupportedMsg = 'Images can\'t be read automatically yet — please paste your text directly below.';
 
     } else {
-      // Plain text formats (.txt, .md, etc.)
-      text = await f.text();
-      if (looksLikeGarbage(text)) unsupported = true;
+      // Plain text formats (.txt, .md, and any other text/* type) — attempt to read as text.
+      try {
+        text = await f.text();
+      } catch (e) {
+        unsupported = true;
+        unsupportedMsg = 'I couldn\'t automatically read this file type. Supported for automatic reading: .pdf, .docx, .pptx, .txt. Please paste the text into the chat.';
+      }
     }
 
-    setTimeout(function() {
-      rmTyping('f-chat');
-      if (unsupported || looksLikeGarbage(text)) {
-        addBot('f-chat', 'I can\'t automatically read <strong>.' + ext + '</strong> files yet — supported for automatic reading: <strong>.pdf</strong>, <strong>.docx</strong>, and plain text (<strong>.txt</strong>). Please paste your assignment text directly into the chat box below and I\'ll give you full feedback on it.');
-        return;
-      }
-      var result = analyseText(text);
-      addBot('f-chat', result.replace(/\n/g, '<br>'));
-      lastFeedback = result;
+    rmTyping(chatId);
+
+    // Reuse the existing binary/garbage detector rather than a plain length check —
+    // a short-but-clean text file shouldn't be rejected, and a long-but-binary one should be.
+    if (!unsupported && looksLikeGarbage(text)) {
+      unsupported = true;
+      unsupportedMsg = 'I could not extract meaningful text from that file. If it\'s a scanned image, please run OCR or paste the text directly. Supported formats for auto-extract: PDF (text-based), DOCX, PPTX, TXT.';
+    }
+
+    if (unsupported) {
+      addBot(chatId, unsupportedMsg || 'I couldn\'t reliably read this file — supported for automatic reading: <strong>.pdf</strong>, <strong>.docx</strong>, <strong>.pptx</strong>, and plain text (<strong>.txt</strong>). Please paste your text directly into the chat box below instead.');
+      return;
+    }
+
+    if (isPortfolio) {
+      lastPortfolioDoc = text;
+      var summary = summariseDoc(text, 260);
+      addBot(chatId, '<strong>' + summary + '</strong><br><br>If you ask portfolio questions now I will use this document to give tailored answers.');
+    } else {
+      lastFeedbackText = text;
+      var anal = analyseText(text);
+      var fsummary = summariseDoc(text, 220);
+      addBot(chatId, '<strong>' + fsummary + '</strong><br><br>' + anal.replace(/\n/g, '<br>'));
+      lastFeedback = anal; // the generated feedback itself — kept separate from lastFeedbackText
+                           // (the raw uploaded text) so the download button below saves the
+                           // actual feedback, not just an excerpt of the learner's own document.
       document.getElementById('f-dlbtn').style.display = 'flex';
-    }, 1200);
+    }
   } catch(e) {
-    rmTyping('f-chat');
-    addBot('f-chat', 'Could not read the file automatically. Please paste your assignment text in the chat box below for full feedback.');
+    rmTyping(chatId);
+    addBot(chatId, 'Could not read the file automatically. Please paste your text into the chat box below for a prompt, contextual reply.');
+    console.error('handleUpload error', e);
   }
 }
+
+// Downloads the actual generated feedback report. (The pasted suggestion's version of this
+// function downloaded a truncated excerpt of the learner's own uploaded text instead of the
+// feedback — that would make the "Download Feedback" button save the wrong content, so this
+// keeps the original, correct behavior.)
 function doDownload() {
-  if (!lastFeedback) return;
+  if (!lastFeedback) { alert('No feedback content available to download.'); return; }
   var a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([lastFeedback], {type:'text/plain'}));
   a.download = 'MentorSync_Feedback.txt'; a.click();
@@ -1650,6 +1928,18 @@ function answerPortfolioQ(q) {
   return 'Here\'s how to think about "<em>' + (q.length > 80 ? q.substring(0,80)+'...' : q) + '</em>":<br><br>Whatever the specific question, ground the answer in your actual work: name what you did, show the real result (with numbers if possible), and use real screenshots or links rather than descriptions.<br><br>For tools, it\'s just two options — <strong>Carrd</strong> (fast, simple, free) or <strong>Framer</strong> (more polished, more time). Try asking me about a specific section — bio, skills, projects, certifications, contact — or your pillar (e.g. "data science portfolio") for more targeted advice.';
 }
 
+// Prepends a short excerpt of the uploaded portfolio doc ahead of the normal
+// pattern-matched answer, so replies are visibly grounded in what was uploaded.
+// Note: this doesn't make answerPortfolioQ itself read the document's content —
+// the underlying answer logic is still the same keyword-matched responses as
+// before; this only adds a "here's what you uploaded" preface to it.
+function answerPortfolioQWithContext(q, docText) {
+  var base = answerPortfolioQ(q);
+  if (!docText || !docText.trim()) return base;
+  var summary = summariseDoc(docText, 260);
+  return '<div style="margin-bottom:8px;"><em>Using your uploaded document:</em><br>' + summary + '</div>' + base;
+}
+
 function sendPortfolio() {
   var inp = document.getElementById('p-input');
   var q = inp.value.trim(); if (!q) return;
@@ -1657,8 +1947,12 @@ function sendPortfolio() {
   addTyping('p-chat');
   setTimeout(function() {
     rmTyping('p-chat');
-    addBot('p-chat', answerPortfolioQ(q));
-  }, 700);
+    if (lastPortfolioDoc && lastPortfolioDoc.length > 30) {
+      addBot('p-chat', answerPortfolioQWithContext(q, lastPortfolioDoc));
+    } else {
+      addBot('p-chat', answerPortfolioQ(q));
+    }
+  }, 300);
 }
 
 // ── REMINDERS (demo) ──────────────────────────
@@ -1682,6 +1976,7 @@ var MOCK_CALENDARS = {
   ]}
 };
 var currentReminderPlan = null;
+var lastReminderMessage = '';
 
 function fetchReminderTimeline() {
   var name = document.getElementById('r-name').value.trim();
@@ -1701,11 +1996,36 @@ function fetchReminderTimeline() {
   document.getElementById('r-success').style.display = 'none';
 }
 
+// Builds the actual reminder text that would be sent — real content generated
+// from this learner's real deadline data, not a placeholder string.
+function buildReminderMessage(plan) {
+  var lines = plan.items.map(function(it) { return '• ' + it.name + ' — due ' + it.date; }).join('\n');
+  return 'Hi ' + plan.name + '! 👋 Here are your upcoming deadlines for ' + plan.course + ':\n\n' + lines +
+    '\n\nMake sure to submit each one on time — reach out if you need support or an extension on any of these.';
+}
+
+function copyReminderMessage() {
+  if (!lastReminderMessage) return;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(lastReminderMessage).then(function() {
+      var btn = document.getElementById('r-copy-btn');
+      if (btn) { var orig = btn.textContent; btn.textContent = 'Copied ✓'; setTimeout(function(){ btn.textContent = orig; }, 1500); }
+    });
+  }
+}
+
 function sendReminder() {
   if (!currentReminderPlan) return;
   document.getElementById('r-review').style.opacity = '0.5';
   document.getElementById('r-review').style.pointerEvents = 'none';
-  document.getElementById('r-success-txt').textContent = '✅ Preview ready for ' + currentReminderPlan.name + ' (' + currentReminderPlan.cohort + '). Once connected to the Teams workflow bot, this will post automatically into the learner\'s individual Teams chat.';
+  lastReminderMessage = buildReminderMessage(currentReminderPlan);
+  document.getElementById('r-success').innerHTML =
+    '<div style="width:100%;">' +
+      '<div style="font-weight:600;margin-bottom:8px;">✅ Message ready for ' + currentReminderPlan.name + ' (' + currentReminderPlan.cohort + ')</div>' +
+      '<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;white-space:pre-wrap;font-size:14px;line-height:1.5;margin-bottom:10px;">' + lastReminderMessage.replace(/\n/g, '<br>') + '</div>' +
+      '<button id="r-copy-btn" class="dl-btn" style="width:auto;display:inline-flex;" onclick="copyReminderMessage()">📋 Copy message</button>' +
+      '<div style="font-size:12px;color:var(--muted);margin-top:10px;">This message is generated and ready to send now. Once the Teams workflow bot is connected, clicking Send will post it automatically instead of needing to copy/paste it in.</div>' +
+    '</div>';
   document.getElementById('r-success').style.display = 'flex';
 }
 
