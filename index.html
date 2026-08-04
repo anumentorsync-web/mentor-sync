@@ -655,7 +655,7 @@ footer span { color: #fff; font-weight: 600; }
       <div class="card" onclick="openPage('feedback')">
         <div class="card-top">
           <div class="card-icon">📋</div>
-          <div class="card-badge">Demo · Pending API Key Connection</div>
+          <div class="card-badge">AI-Powered · Live</div>
         </div>
         <div class="card-body">
           <div class="card-title">Assignment Feedback</div>
@@ -819,10 +819,10 @@ footer span { color: #fff; font-weight: 600; }
   </div>
   <div class="pv-body">
     <div style="background:rgba(201,168,76,0.12);border:1.5px solid rgba(201,168,76,0.4);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12.5px;color:var(--muted);line-height:1.5;">
-      🔒 <b style="color:var(--navy);">This is currently running on a built-in knowledge base.</b>
+      🤖 <b style="color:var(--navy);">This now runs on a live AI model (via Puter.js) that reads your actual submission.</b>
       <ul style="margin:8px 0 0 18px;padding:0;">
-        <li>For more precise, customised feedback, this can be connected to a Claude API key for seamless feedback across multiple queries, any domain, and content complexities.</li>
-        <li>Alternatively, it can be linked directly to our organisation's <b style="color:var(--navy);">LMS knowledge base</b>, so every answer and rubric is drawn from our own course content.</li>
+        <li>Feedback and grade are generated from what you actually wrote — not a fixed keyword checklist — and it can handle subject-specific/complex terminology across any pillar.</li>
+        <li>It's still not connected to our organisation's <b style="color:var(--navy);">LMS knowledge base</b>, so it can't grade against our own course-specific rubrics yet — that would need a separate integration with the LMS.</li>
       </ul>
     </div>
     <!-- CAPTURE SCREEN -->
@@ -1057,7 +1057,44 @@ footer span { color: #fff; font-weight: 600; }
      JAVASCRIPT
 ════════════════════════════════════════ -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-<script src="https://js.puter.com/v2/"></script>
+<script>
+// ── PUTER.JS SELF-DIAGNOSING LOADER ───────────
+// Loaded dynamically (instead of a plain <script src>) so we can capture
+// exactly why it failed, if it does — network block, timeout, DNS error,
+// etc. — and surface that reason directly in the chat UI, without needing
+// the browser console.
+window.__puterStatus = 'loading';
+window.__puterError = null;
+(function loadPuter() {
+  var s = document.createElement('script');
+  s.src = 'https://js.puter.com/v2/';
+  var timedOut = setTimeout(function() {
+    if (window.__puterStatus === 'loading') {
+      window.__puterStatus = 'failed';
+      window.__puterError = 'Script did not finish loading within 10s (likely blocked or network too slow).';
+      console.warn('Puter.js load timeout:', window.__puterError);
+    }
+  }, 10000);
+  s.onload = function() {
+    clearTimeout(timedOut);
+    if (typeof puter === 'undefined') {
+      window.__puterStatus = 'failed';
+      window.__puterError = 'Script reported loaded, but window.puter was never defined.';
+      console.warn('Puter.js anomaly:', window.__puterError);
+    } else {
+      window.__puterStatus = 'ready';
+      console.log('Puter.js loaded successfully.');
+    }
+  };
+  s.onerror = function() {
+    clearTimeout(timedOut);
+    window.__puterStatus = 'failed';
+    window.__puterError = 'Browser could not load https://js.puter.com/v2/ at all (blocked by network/firewall/extension, DNS failure, or CDN unreachable from this connection).';
+    console.warn('Puter.js failed to load:', window.__puterError);
+  };
+  document.head.appendChild(s);
+})();
+</script>
 <script>
 // ── AUTOFILL (localStorage) ──────────────────
 function saveUser(name, email) {
@@ -1274,10 +1311,23 @@ function setScale(s, btn) {
 // ── CAPTURE FUNCTIONS ─────────────────────────
 var currentLearner = {email:'', name:''};
 
+// ── PUTER AUTH — must be triggered directly from a user click, not after
+// other awaits, or browsers silently block the sign-in popup. We fire it
+// here (Continue → button click) so by the time the learner sends a
+// message or uploads a file, they're already signed in.
+function ensurePuterSignedIn() {
+  try {
+    if (typeof puter !== 'undefined' && puter.auth && !puter.auth.isSignedIn()) {
+      puter.auth.signIn().catch(function(e){ console.warn('Puter sign-in dismissed/failed:', e); });
+    }
+  } catch (e) { console.warn('Puter sign-in check failed:', e); }
+}
+
 function startFeedback() {
   var email = document.getElementById('f-email').value.trim();
   var name = document.getElementById('f-name-inp').value.trim();
   if (!email || !name) { alert('Please enter both your school email and name.'); return; }
+  ensurePuterSignedIn();
   currentLearner = {email:email, name:name};
   saveUser(name, email);
   document.getElementById('f-capture').style.display = 'none';
@@ -1290,6 +1340,7 @@ function startPortfolio() {
   var email = document.getElementById('p-email').value.trim();
   var name = document.getElementById('p-name-inp').value.trim();
   if (!email || !name) { alert('Please enter both your school email and name.'); return; }
+  ensurePuterSignedIn();
   currentLearner = {email:email, name:name};
   saveUser(name, email);
   document.getElementById('p-capture').style.display = 'none';
@@ -1625,17 +1676,27 @@ async function handleUpload(inp) {
       if (looksLikeGarbage(text)) unsupported = true;
     }
 
-    setTimeout(function() {
+    rmTyping('f-chat');
+    if (unsupported || looksLikeGarbage(text)) {
+      addBot('f-chat', unsupportedMsg || 'I couldn\'t reliably read this file — supported for automatic reading: <strong>.pdf</strong>, <strong>.docx</strong>, <strong>.pptx</strong>, and plain text (<strong>.txt</strong>). Please paste your assignment text directly into the chat box below and I\'ll give you full feedback on it.');
+      return;
+    }
+    addTyping('f-chat');
+    try {
+      var result = await getAiAssignmentFeedback(text);
       rmTyping('f-chat');
-      if (unsupported || looksLikeGarbage(text)) {
-        addBot('f-chat', unsupportedMsg || 'I couldn\'t reliably read this file — supported for automatic reading: <strong>.pdf</strong>, <strong>.docx</strong>, <strong>.pptx</strong>, and plain text (<strong>.txt</strong>). Please paste your assignment text directly into the chat box below and I\'ll give you full feedback on it.');
-        return;
-      }
-      var result = analyseText(text);
-      addBot('f-chat', result.replace(/\n/g, '<br>'));
+      addBot('f-chat', formatAiReply(result));
       lastFeedback = result;
       document.getElementById('f-dlbtn').style.display = 'flex';
-    }, 1200);
+    } catch (aiErr) {
+      console.warn('Puter AI feedback failed, using offline engine:', aiErr);
+      rmTyping('f-chat');
+      addDiagNotice('f-chat', aiErr);
+      var fallbackResult = analyseText(text);
+      addBot('f-chat', fallbackResult.replace(/\n/g, '<br>'));
+      lastFeedback = fallbackResult;
+      document.getElementById('f-dlbtn').style.display = 'flex';
+    }
   } catch(e) {
     rmTyping('f-chat');
     addBot('f-chat', 'Could not read the file automatically. Please paste your assignment text in the chat box below for full feedback.');
@@ -1648,15 +1709,137 @@ function doDownload() {
   a.download = 'MentorSync_Feedback.txt'; a.click();
 }
 
+// ── LIVE AI ASSIGNMENT FEEDBACK (Puter.js — free, no API key) ─
+// Replaces keyword-heuristic scoring with a real model that actually reads
+// the submission. Falls back to the offline heuristic engine (below) only
+// if Puter.js is unavailable or the AI call fails.
+var FEEDBACK_MAX_CHARS = 300000; // ~50k words — comfortably covers any real assignment; longer submissions are truncated with a clear note rather than silently failing.
+
+var FEEDBACK_SYSTEM_PROMPT = "You are MentorSync, a strict, precise assignment grader and feedback mentor for EduClaas learners. " +
+  "You will be given the full text of a learner's actual submission. Read it properly — including technical/subject-specific terminology, regardless of the subject (marketing, data science, software engineering, business, etc.) — and judge it on its real content, not on whether specific keywords appear.\n\n" +
+  "OUTPUT FORMAT — exactly this structure, plain text, **bold** only for the two headers, no markdown headers, no emoji:\n" +
+  "Areas for Improvement\n" +
+  "• (3-5 bullet points, each specific to what THIS submission actually does or is missing — quote or paraphrase the exact part you mean when possible. No generic advice that could apply to any essay.)\n\n" +
+  "Estimated Grade\n" +
+  "(a specific number)/100 — (one sentence justifying it based on THIS submission's actual strengths/weaknesses)\n\n" +
+  "RULES:\n" +
+  "- Base the grade strictly on the actual quality of argument, evidence, structure, and clarity in the text given — never default to a fixed baseline score.\n" +
+  "- If the text is very short, clearly incomplete, or off-topic for an assignment, say so plainly and grade accordingly (can be low).\n" +
+  "- Do not pad with encouragement or filler sentences — every line must be specific and actionable.\n" +
+  "- If a word-count requirement isn't stated, don't invent one — just note the actual word count if it looks unusually short for a full assignment.";
+
+function buildFeedbackMessages(submissionText) {
+  var truncatedNote = '';
+  var text = submissionText;
+  if (text.length > FEEDBACK_MAX_CHARS) {
+    text = text.slice(0, FEEDBACK_MAX_CHARS);
+    truncatedNote = '\n\n[Note to grader: this submission was truncated to the first ~50,000 words for length — base feedback only on the portion shown, and mention in your response that this was a partial read due to length.]';
+  }
+  return [
+    { role: 'system', content: FEEDBACK_SYSTEM_PROMPT },
+    { role: 'user', content: 'Here is my submission:\n\n' + text + truncatedNote }
+  ];
+}
+
+// ── TIMEOUT SAFETY NET ────────────────────────
+// If the Puter sign-in popup gets silently blocked (or the network stalls),
+// puter.ai.chat can hang with no error. This guarantees we always give up
+// and fall back after a fixed wait, instead of leaving "typing..." forever.
+// ── PUTER AVAILABILITY DIAGNOSIS ──────────────
+// Returns null if Puter is ready to use, otherwise a plain-English reason
+// suitable for showing directly in the chat (no console needed).
+function puterUnavailableReason() {
+  if (typeof puter === 'undefined' || !puter.ai || !puter.ai.chat) {
+    if (window.__puterStatus === 'failed') {
+      return window.__puterError || 'Puter.js failed to load for an unknown reason.';
+    }
+    if (window.__puterStatus === 'loading') {
+      return 'Puter.js is still loading — try again in a few seconds.';
+    }
+    return 'Puter.js did not initialise (window.puter is unavailable).';
+  }
+  return null;
+}
+
+function addDiagNotice(chatId, err) {
+  var msg = (err && err.message) ? err.message : String(err);
+  addBot(chatId, '<span style="opacity:0.7;font-size:12.5px;">⚠️ Live AI unavailable (' + escapeHtml(msg) + ') — showing offline feedback instead:</span>');
+}
+
+function withTimeout(promise, ms) {
+  return new Promise(function(resolve, reject) {
+    var timer = setTimeout(function() { reject(new Error('AI request timed out after ' + ms + 'ms — possibly a blocked sign-in popup.')); }, ms);
+    promise.then(function(v) { clearTimeout(timer); resolve(v); }, function(e) { clearTimeout(timer); reject(e); });
+  });
+}
+function puterChat(messages, opts) {
+  return withTimeout(puter.ai.chat(messages, opts), 20000);
+}
+
+async function getAiAssignmentFeedback(submissionText) {
+  var reason = puterUnavailableReason();
+  if (reason) throw new Error(reason);
+  var messages = buildFeedbackMessages(submissionText);
+  var response = await puterChat(messages, { model: 'claude-sonnet-4-6', temperature: 0.2, max_tokens: 700 });
+  var text = extractAiText(response).trim();
+  if (!text) throw new Error('empty AI response');
+  return text;
+}
+
+// ── LIVE AI Q&A FOR FEEDBACK CHAT (Puter.js) ──────────────────
+var feedbackChatHistory = [];
+var FEEDBACK_QA_SYSTEM_PROMPT = "You are MentorSync, a strict, precise assignment-writing mentor for EduClaas learners. Answer whatever the learner asks — writing help, referencing, structure, or general questions — directly and specifically, not with a generic script. " +
+  "Always give a direct, concrete answer, including your best answer on specifics you're not fully certain of — never refuse or defer elsewhere. " +
+  "No filler openers, no restating the question, no hedging unless genuinely warranted. Default to 2-4 sentences or a tight list unless the question needs a full walkthrough. " +
+  "If the question is ambiguous, ask exactly one short clarifying question instead of guessing. Plain text, **bold** for key terms only, no headers, no emoji.";
+
+async function getAiFeedbackQA(question) {
+  var reason = puterUnavailableReason();
+  if (reason) throw new Error(reason);
+  feedbackChatHistory.push({ role: 'user', content: question });
+  var messages = [{ role: 'system', content: FEEDBACK_QA_SYSTEM_PROMPT }].concat(feedbackChatHistory);
+  var response = await puterChat(messages, { model: 'claude-sonnet-4-6', temperature: 0.2, max_tokens: 300 });
+  var text = extractAiText(response).trim();
+  if (!text) throw new Error('empty AI response');
+  feedbackChatHistory.push({ role: 'assistant', content: text });
+  return text;
+}
+
 function sendFeedback() {
   var inp = document.getElementById('f-input');
   var q = inp.value.trim(); if (!q) return;
   addUsr('f-chat', q); inp.value = '';
   addTyping('f-chat');
-  setTimeout(function() {
-    rmTyping('f-chat');
-    addBot('f-chat', answerQ(q));
-  }, 700);
+
+  var wordCount = q.split(/\s+/).filter(Boolean).length;
+  var looksLikeSubmission = wordCount >= 80; // pasted assignment text, not just a question
+
+  if (looksLikeSubmission) {
+    getAiAssignmentFeedback(q).then(function(result) {
+      rmTyping('f-chat');
+      addBot('f-chat', formatAiReply(result));
+      lastFeedback = result;
+      document.getElementById('f-dlbtn').style.display = 'flex';
+    }).catch(function(err) {
+      console.warn('Puter AI feedback failed, using offline engine:', err);
+      rmTyping('f-chat');
+      addDiagNotice('f-chat', err);
+      var result = analyseText(q);
+      addBot('f-chat', result.replace(/\n/g, '<br>'));
+      lastFeedback = result;
+      document.getElementById('f-dlbtn').style.display = 'flex';
+    });
+  } else {
+    getAiFeedbackQA(q).then(function(result) {
+      rmTyping('f-chat');
+      addBot('f-chat', formatAiReply(result));
+    }).catch(function(err) {
+      console.warn('Puter AI Q&A failed, using offline engine:', err);
+      rmTyping('f-chat');
+      addDiagNotice('f-chat', err);
+      addBot('f-chat', answerQ(q));
+    });
+  }
 }
 
 // ── PORTFOLIO Q&A ENGINE ──────────────────────
@@ -1804,10 +1987,11 @@ function sendPortfolio() {
   addUsr('p-chat', q); inp.value = '';
   addTyping('p-chat');
 
-  if (typeof puter === 'undefined' || !puter.ai || !puter.ai.chat) {
-    // Puter.js failed to load (e.g. network/firewall blocked js.puter.com) — offline fallback
+  var puterReason = puterUnavailableReason();
+  if (puterReason) {
     setTimeout(function() {
       rmTyping('p-chat');
+      addDiagNotice('p-chat', new Error(puterReason));
       addBot('p-chat', answerPortfolioQ(q));
     }, 700);
     return;
@@ -1816,7 +2000,7 @@ function sendPortfolio() {
   portfolioChatHistory.push({ role: 'user', content: q });
   var messages = [{ role: 'system', content: PORTFOLIO_SYSTEM_PROMPT }].concat(portfolioChatHistory);
 
-  puter.ai.chat(messages, { model: 'claude-sonnet-4-6', temperature: 0.2, max_tokens: 300 }).then(function(response) {
+  puterChat(messages, { model: 'claude-sonnet-4-6', temperature: 0.2, max_tokens: 300 }).then(function(response) {
     rmTyping('p-chat');
     var text = extractAiText(response).trim();
     if (!text) throw new Error('empty AI response');
@@ -1825,6 +2009,7 @@ function sendPortfolio() {
   }).catch(function(err) {
     console.warn('Puter AI call failed, using offline engine:', err);
     rmTyping('p-chat');
+    addDiagNotice('p-chat', err);
     addBot('p-chat', answerPortfolioQ(q));
   });
 }
