@@ -1057,6 +1057,7 @@ footer span { color: #fff; font-weight: 600; }
      JAVASCRIPT
 ════════════════════════════════════════ -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://js.puter.com/v2/"></script>
 <script>
 // ── AUTOFILL (localStorage) ──────────────────
 function saveUser(name, email) {
@@ -1294,6 +1295,7 @@ function startPortfolio() {
   document.getElementById('p-capture').style.display = 'none';
   document.getElementById('p-main').style.display = 'block';
   saveLearnerActivity(email, name, 'Portfolio Support');
+  portfolioChatHistory = []; // fresh AI conversation for this session
 }
 
 function startEligibility() {
@@ -1760,15 +1762,71 @@ function answerPortfolioQ(q) {
   return 'Here\'s how to think about "<em>' + (q.length > 80 ? q.substring(0,80)+'...' : q) + '</em>":<br><br>Whatever the specific question, ground the answer in your actual work: name what you did, show the real result (with numbers if possible), and use real screenshots or links rather than descriptions.<br><br>For tools, it\'s just two options — <strong>Carrd</strong> (fast, simple, free) or <strong>Framer</strong> (more polished, more time). Try asking me about a specific section — bio, skills, projects, certifications, contact — or your pillar (e.g. "data science portfolio") for more targeted advice.';
 }
 
+// ── LIVE AI (Puter.js — free, no API key, no cost to us) ─────
+// Puter.js gives free access to real AI models (Claude/GPT) directly from
+// the browser under a "user-pays" model, so it costs the org $0 no matter
+// how many learners use it. On a learner's first message it may briefly
+// show a free Puter sign-in popup (no card required) before responding.
+var portfolioChatHistory = [];
+var PORTFOLIO_SYSTEM_PROMPT = "You are MentorSync, the strict, precise virtual mentor for EduClaas learners (pillars: Business IT, Data Science, Digital Business, Software Engineering, Systems Management), available inside the Portfolio Support feature. " +
+  "Portfolio-building (structure, content, Carrd, Framer) is your specialty, but you are not limited to it — answer whatever the learner actually asks, including general academic, career, or study questions. Never redirect a question elsewhere; always give the most useful direct answer you can with the knowledge you have.\n\n" +
+  "ANSWER EVERY QUESTION — Always give a direct, concrete answer, including for pricing, features, or specifics you're not 100% certain of. Give your best current answer rather than deferring the learner elsewhere. Do not refuse or decline to answer.\n\n" +
+  "PRECISION — Answer the exact question asked, nothing more. No filler openers like 'Great question!' or 'I'd be happy to help.' No restating the question. No hedging language ('might', 'could potentially') unless genuine uncertainty exists. Every sentence must add new, concrete information — delete any sentence that doesn't.\n\n" +
+  "LENGTH — Default to 2-4 sentences or a tight 3-5 item list. Only go longer if the question explicitly asks for a full structure/walkthrough. Never pad for length.\n\n" +
+  "AMBIGUITY — If the question is ambiguous, ask exactly one short clarifying question instead of guessing — do not answer a vague question with a vague answer.\n\n" +
+  "TONE — Direct and matter-of-fact, not chatty. Skip encouragement/motivational filler; give the answer.\n\n" +
+  "FORMAT — Plain text, **bold** only for key terms, no markdown headers, no code blocks, no emoji.";
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function formatAiReply(text) {
+  var safe = escapeHtml(text);
+  safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  safe = safe.replace(/\n/g, '<br>');
+  return safe;
+}
+function extractAiText(response) {
+  if (typeof response === 'string') return response;
+  if (response && response.message) {
+    var c = response.message.content;
+    if (typeof c === 'string') return c;
+    if (Array.isArray(c)) {
+      return c.map(function(block){ return block && block.text ? block.text : ''; }).join(' ').trim();
+    }
+  }
+  return response ? String(response) : '';
+}
+
 function sendPortfolio() {
   var inp = document.getElementById('p-input');
   var q = inp.value.trim(); if (!q) return;
   addUsr('p-chat', q); inp.value = '';
   addTyping('p-chat');
-  setTimeout(function() {
+
+  if (typeof puter === 'undefined' || !puter.ai || !puter.ai.chat) {
+    // Puter.js failed to load (e.g. network/firewall blocked js.puter.com) — offline fallback
+    setTimeout(function() {
+      rmTyping('p-chat');
+      addBot('p-chat', answerPortfolioQ(q));
+    }, 700);
+    return;
+  }
+
+  portfolioChatHistory.push({ role: 'user', content: q });
+  var messages = [{ role: 'system', content: PORTFOLIO_SYSTEM_PROMPT }].concat(portfolioChatHistory);
+
+  puter.ai.chat(messages, { model: 'claude-sonnet-4-6', temperature: 0.2, max_tokens: 300 }).then(function(response) {
+    rmTyping('p-chat');
+    var text = extractAiText(response).trim();
+    if (!text) throw new Error('empty AI response');
+    portfolioChatHistory.push({ role: 'assistant', content: text });
+    addBot('p-chat', formatAiReply(text));
+  }).catch(function(err) {
+    console.warn('Puter AI call failed, using offline engine:', err);
     rmTyping('p-chat');
     addBot('p-chat', answerPortfolioQ(q));
-  }, 700);
+  });
 }
 
 // ── REMINDERS (demo) ──────────────────────────
