@@ -277,9 +277,9 @@ footer span { color: #fff; font-weight: 600; }
 ═══════════════════════════════════════════ */
 .chat-area {
   background: var(--bg-light); border-radius: 14px;
-  padding: 16px; height: 340px; overflow-y: auto;
+  padding: 18px; height: 480px; overflow-y: auto;
   margin-bottom: 14px; border: 1px solid rgba(201,168,76,0.25);
-  display: flex; flex-direction: column; gap: 12px;
+  display: flex; flex-direction: column; gap: 14px;
   width: 100%;
 }
 .cm { display: flex; gap: 8px; }
@@ -291,9 +291,11 @@ footer span { color: #fff; font-weight: 600; }
 .cm-av.bot { background: var(--navy); color: #fff; }
 .cm-av.usr { background: var(--gold); color: #fff; }
 .cm-bub {
-  border-radius: 12px; padding: 10px 14px;
-  font-size: 14px; line-height: 1.55; max-width: 84%;
+  border-radius: 12px; padding: 13px 16px;
+  font-size: 15px; line-height: 1.65; max-width: 88%;
 }
+.cm-bub strong { font-size: 15.5px; }
+.cm-av { margin-top: 2px; }
 .cm-bub.bot { background: var(--navy); color: #fff; border-bottom-left-radius: 3px; }
 .cm-bub.usr { background: rgba(26,46,107,0.08); color: var(--text); border-bottom-right-radius: 3px; margin-left: auto; }
 .typing-dots { display: flex; gap: 4px; align-items: center; padding: 4px 0; }
@@ -525,8 +527,8 @@ footer span { color: #fff; font-weight: 600; }
   .pv-title { font-size: 15px; }
   .pv-head { padding: 12px 12px; padding-top: calc(12px + env(safe-area-inset-top)); }
   .pv-body { padding: 16px 13px calc(80px + env(safe-area-inset-bottom)); }
-  .chat-area { height: 52vh; height: 52dvh; padding: 12px; }
-  .cm-bub { font-size: 14px; max-width: 88%; }
+  .chat-area { height: 62vh; height: 62dvh; padding: 13px; }
+  .cm-bub { font-size: 14.5px; max-width: 91%; padding: 12px 14px; }
   .txt-in { font-size: 16px; min-width: 0; }
   .send-btn { font-size: 14px; padding: 12px 14px; }
   .upload-lbl { padding: 20px 14px; }
@@ -567,7 +569,7 @@ footer span { color: #fff; font-weight: 600; }
   .hero h1 { font-size: 19px; }
   .pv-title { font-size: 14px; }
   .logo-text .tag { display: none; }
-  .cm-bub { font-size: 13.5px; padding: 9px 12px; }
+  .cm-bub { font-size: 14px; padding: 11px 13px; max-width: 93%; }
   .cm-av { width: 24px; height: 24px; font-size: 10px; }
   .info-box { padding: 13px; font-size: 13.5px; }
   .info-box-title { font-size: 15px; }
@@ -578,7 +580,7 @@ footer span { color: #fff; font-weight: 600; }
 
 /* landscape phones: keep the chat usable */
 @media (max-height: 520px) and (max-width: 900px) {
-  .chat-area { height: 46vh; min-height: 200px; }
+  .chat-area { height: 52vh; min-height: 220px; }
   .capture-screen { min-height: auto; padding: 20px 12px; }
 }
 
@@ -905,11 +907,11 @@ footer span { color: #fff; font-weight: 600; }
       <p>Get a second opinion on your assignment <b>before</b> you submit it — so you can fix the weak parts while there's still time.</p>
       <ul>
         <li><b>Upload or paste</b> your assignment (PDF, DOCX, PPT or text).</li>
-        <li>A live AI model <b>reads what you actually wrote</b> and returns clear <b>areas for improvement</b> plus an <b>estimated grade out of 100</b>.</li>
+        <li>It <b>reads what you actually wrote</b> and returns clear <b>areas for improvement</b> plus an <b>estimated grade out of 100</b>.</li>
         <li><b>Act on it:</b> fix the flagged points, re-upload, and see if the estimate moves up.</li>
         <li>Download the feedback as a report to keep or share with your mentor.</li>
       </ul>
-      <span class="info-note">⚠️ Not yet connected to the EduClaas LMS, so it grades on general academic standards — not your exact course rubric. Treat the grade as a guide, not your official mark.</span>
+      <span class="info-note">🔒 Runs entirely in your browser — <b>no sign-in, no account, nothing to install</b>, and your assignment is never uploaded anywhere. It checks structure, argument, evidence and referencing against general academic standards, not your exact course rubric, so treat the grade as a guide rather than your official mark.</span>
     </div>
     <!-- CAPTURE SCREEN -->
     <div id="f-capture" class="capture-screen">
@@ -1166,44 +1168,6 @@ footer span { color: #fff; font-weight: 600; }
 ════════════════════════════════════════ -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script>
-// ── PUTER.JS SELF-DIAGNOSING LOADER ───────────
-// Loaded dynamically (instead of a plain <script src>) so we can capture
-// exactly why it failed, if it does — network block, timeout, DNS error,
-// etc. — and surface that reason directly in the chat UI, without needing
-// the browser console.
-window.__puterStatus = 'loading';
-window.__puterError = null;
-(function loadPuter() {
-  var s = document.createElement('script');
-  s.src = 'https://js.puter.com/v2/';
-  var timedOut = setTimeout(function() {
-    if (window.__puterStatus === 'loading') {
-      window.__puterStatus = 'failed';
-      window.__puterError = 'Script did not finish loading within 10s (likely blocked or network too slow).';
-      console.warn('Puter.js load timeout:', window.__puterError);
-    }
-  }, 10000);
-  s.onload = function() {
-    clearTimeout(timedOut);
-    if (typeof puter === 'undefined') {
-      window.__puterStatus = 'failed';
-      window.__puterError = 'Script reported loaded, but window.puter was never defined.';
-      console.warn('Puter.js anomaly:', window.__puterError);
-    } else {
-      window.__puterStatus = 'ready';
-      console.log('Puter.js loaded successfully.');
-    }
-  };
-  s.onerror = function() {
-    clearTimeout(timedOut);
-    window.__puterStatus = 'failed';
-    window.__puterError = 'Browser could not load https://js.puter.com/v2/ at all (blocked by network/firewall/extension, DNS failure, or CDN unreachable from this connection).';
-    console.warn('Puter.js failed to load:', window.__puterError);
-  };
-  document.head.appendChild(s);
-})();
-</script>
-<script>
 // ── AUTOFILL (localStorage) ──────────────────
 function saveUser(name, email) {
   try { localStorage.setItem('ms_n', name); localStorage.setItem('ms_e', email); } catch(x) {}
@@ -1419,29 +1383,15 @@ function setScale(s, btn) {
 // ── CAPTURE FUNCTIONS ─────────────────────────
 var currentLearner = {email:'', name:''};
 
-// ── PUTER AUTH — must be triggered directly from a user click, not after
-// other awaits, or browsers silently block the sign-in popup. We fire it
-// here (Continue → button click) so by the time the learner sends a
-// message or uploads a file, they're already signed in.
-function ensurePuterSignedIn() {
-  try {
-    if (typeof puter !== 'undefined' && puter.auth && !puter.auth.isSignedIn()) {
-      puter.auth.signIn().catch(function(e){ console.warn('Puter sign-in dismissed/failed:', e); });
-    }
-  } catch (e) { console.warn('Puter sign-in check failed:', e); }
-}
-
 function startFeedback() {
   var email = document.getElementById('f-email').value.trim();
   var name = document.getElementById('f-name-inp').value.trim();
   if (!email || !name) { alert('Please enter both your school email and name.'); return; }
-  ensurePuterSignedIn();
   currentLearner = {email:email, name:name};
   saveUser(name, email);
   document.getElementById('f-capture').style.display = 'none';
   document.getElementById('f-main').style.display = 'block';
   saveLearnerActivity(email, name, 'Assignment Feedback');
-  addBot('f-chat', '<strong>Why use this?</strong> This gives you a private, honest first read on your assignment before you submit it \u2014 catching gaps in structure, argument, or evidence early, while you can still fix them, instead of finding out only after grading.');
   addBot('f-chat', 'Hi ' + name + '! Upload your assignment or type a specific question. I will provide Areas for Improvement and an Estimated Grade.');
 }
 
@@ -1449,7 +1399,6 @@ function startPortfolio() {
   var email = document.getElementById('p-email').value.trim();
   var name = document.getElementById('p-name-inp').value.trim();
   if (!email || !name) { alert('Please enter both your school email and name.'); return; }
-  ensurePuterSignedIn();
   currentLearner = {email:email, name:name};
   saveUser(name, email);
   document.getElementById('p-capture').style.display = 'none';
@@ -1605,9 +1554,9 @@ function analyseText(rawText) {
   if (hasCritical) score += 8; if (hasExamples) score += 6; if (hasTheory) score += 5;
   score = Math.min(score, 89);
 
-  var just = score >= 80 ? 'Well-structured with clear argumentation. The remaining gaps below are refinements, not rewrites.'
-    : score >= 68 ? 'Solid foundation — the issues below are the main things holding the grade back.'
-    : 'The structural and evidentiary gaps below need to be addressed before this is submission-ready.';
+  var just = score >= 80 ? 'Well-structured with clear argumentation. The remaining points above are refinements, not rewrites.'
+    : score >= 68 ? 'Solid foundation — the points listed above are the main things holding the grade back.'
+    : 'The structural and evidentiary gaps listed above need to be addressed before this is submission-ready.';
 
   var out = 'Areas for Improvement (based on your actual submission)\n• ' + issues.slice(0, 5).join('\n• ');
   out += '\n\nEstimated Grade\n' + score + '/100 — ' + just;
@@ -1798,21 +1747,11 @@ async function handleUpload(inp) {
       return;
     }
     addTyping('f-chat');
-    try {
-      var result = await getAiAssignmentFeedback(text);
-      rmTyping('f-chat');
-      addBot('f-chat', formatAiReply(result));
-      lastFeedback = result;
-      document.getElementById('f-dlbtn').style.display = 'flex';
-    } catch (aiErr) {
-      console.warn('Puter AI feedback failed, using offline engine:', aiErr);
-      rmTyping('f-chat');
-      addDiagNotice('f-chat', aiErr);
-      var fallbackResult = analyseText(text);
-      addBot('f-chat', fallbackResult.replace(/\n/g, '<br>'));
-      lastFeedback = fallbackResult;
-      document.getElementById('f-dlbtn').style.display = 'flex';
-    }
+    var result = await getAiAssignmentFeedback(text);
+    rmTyping('f-chat');
+    addBot('f-chat', formatReport(result));
+    lastFeedback = result;
+    document.getElementById('f-dlbtn').style.display = 'flex';
   } catch(e) {
     rmTyping('f-chat');
     addBot('f-chat', 'Could not read the file automatically. Please paste your assignment text in the chat box below for full feedback.');
@@ -1825,100 +1764,31 @@ function doDownload() {
   a.download = 'MentorSync_Feedback.txt'; a.click();
 }
 
-// ── LIVE AI ASSIGNMENT FEEDBACK (Puter.js — free, no API key) ─
-// Replaces keyword-heuristic scoring with a real model that actually reads
-// the submission. Falls back to the offline heuristic engine (below) only
-// if Puter.js is unavailable or the AI call fails.
-var FEEDBACK_MAX_CHARS = 300000; // ~50k words — comfortably covers any real assignment; longer submissions are truncated with a clear note rather than silently failing.
+// ── ASSIGNMENT FEEDBACK ENGINE ────────────────
+// Runs entirely in the browser: no sign-in, no popup, no API key, no
+// network call. The learner's assignment text never leaves their device.
+// analyseText() (below) does the actual structural read and grading.
+var FEEDBACK_MAX_CHARS = 300000; // ~50k words — longer submissions are read up to this point.
 
-var FEEDBACK_SYSTEM_PROMPT = "You are MentorSync, a strict, precise assignment grader and feedback mentor for EduClaas learners. " +
-  "You will be given the full text of a learner's actual submission. Read it properly — including technical/subject-specific terminology, regardless of the subject (marketing, data science, software engineering, business, etc.) — and judge it on its real content, not on whether specific keywords appear.\n\n" +
-  "OUTPUT FORMAT — exactly this structure, plain text, **bold** only for the two headers, no markdown headers, no emoji:\n" +
-  "Areas for Improvement\n" +
-  "• (3-5 bullet points, each specific to what THIS submission actually does or is missing — quote or paraphrase the exact part you mean when possible. No generic advice that could apply to any essay.)\n\n" +
-  "Estimated Grade\n" +
-  "(a specific number)/100 — (one sentence justifying it based on THIS submission's actual strengths/weaknesses)\n\n" +
-  "RULES:\n" +
-  "- Base the grade strictly on the actual quality of argument, evidence, structure, and clarity in the text given — never default to a fixed baseline score.\n" +
-  "- If the text is very short, clearly incomplete, or off-topic for an assignment, say so plainly and grade accordingly (can be low).\n" +
-  "- Do not pad with encouragement or filler sentences — every line must be specific and actionable.\n" +
-  "- If a word-count requirement isn't stated, don't invent one — just note the actual word count if it looks unusually short for a full assignment.";
-
-function buildFeedbackMessages(submissionText) {
-  var truncatedNote = '';
-  var text = submissionText;
-  if (text.length > FEEDBACK_MAX_CHARS) {
-    text = text.slice(0, FEEDBACK_MAX_CHARS);
-    truncatedNote = '\n\n[Note to grader: this submission was truncated to the first ~50,000 words for length — base feedback only on the portion shown, and mention in your response that this was a partial read due to length.]';
-  }
-  return [
-    { role: 'system', content: FEEDBACK_SYSTEM_PROMPT },
-    { role: 'user', content: 'Here is my submission:\n\n' + text + truncatedNote }
-  ];
-}
-
-// ── TIMEOUT SAFETY NET ────────────────────────
-// If the Puter sign-in popup gets silently blocked (or the network stalls),
-// puter.ai.chat can hang with no error. This guarantees we always give up
-// and fall back after a fixed wait, instead of leaving "typing..." forever.
-// ── PUTER AVAILABILITY DIAGNOSIS ──────────────
-// Returns null if Puter is ready to use, otherwise a plain-English reason
-// suitable for showing directly in the chat (no console needed).
-function puterUnavailableReason() {
-  if (typeof puter === 'undefined' || !puter.ai || !puter.ai.chat) {
-    if (window.__puterStatus === 'failed') {
-      return window.__puterError || 'Puter.js failed to load for an unknown reason.';
-    }
-    if (window.__puterStatus === 'loading') {
-      return 'Puter.js is still loading — try again in a few seconds.';
-    }
-    return 'Puter.js did not initialise (window.puter is unavailable).';
-  }
-  return null;
-}
-
-function addDiagNotice(chatId, err) {
-  var msg = (err && err.message) ? err.message : String(err);
-  addBot(chatId, '<span style="opacity:0.7;font-size:12.5px;">⚠️ Live AI unavailable (' + escapeHtml(msg) + ') — showing offline feedback instead:</span>');
-}
-
-function withTimeout(promise, ms) {
+// Small deliberate delay so the typing indicator is visible and the reply
+// doesn't flash in instantly — purely cosmetic.
+function thinkThen(fn, ms) {
   return new Promise(function(resolve, reject) {
-    var timer = setTimeout(function() { reject(new Error('AI request timed out after ' + ms + 'ms — possibly a blocked sign-in popup.')); }, ms);
-    promise.then(function(v) { clearTimeout(timer); resolve(v); }, function(e) { clearTimeout(timer); reject(e); });
+    setTimeout(function() {
+      try { resolve(fn()); } catch (e) { reject(e); }
+    }, ms || 600);
   });
 }
-function puterChat(messages, opts) {
-  return withTimeout(puter.ai.chat(messages, opts), 45000);
+
+function getAiAssignmentFeedback(submissionText) {
+  var text = submissionText.length > FEEDBACK_MAX_CHARS
+    ? submissionText.slice(0, FEEDBACK_MAX_CHARS)
+    : submissionText;
+  return thinkThen(function() { return analyseText(text); }, 800);
 }
 
-async function getAiAssignmentFeedback(submissionText) {
-  var reason = puterUnavailableReason();
-  if (reason) throw new Error(reason);
-  var messages = buildFeedbackMessages(submissionText);
-  var response = await puterChat(messages, { model: 'claude-sonnet-4-6', temperature: 0.2, max_tokens: 700 });
-  var text = extractAiText(response).trim();
-  if (!text) throw new Error('empty AI response');
-  return text;
-}
-
-// ── LIVE AI Q&A FOR FEEDBACK CHAT (Puter.js) ──────────────────
-var feedbackChatHistory = [];
-var FEEDBACK_QA_SYSTEM_PROMPT = "You are MentorSync, a strict, precise assignment-writing mentor for EduClaas learners. Answer whatever the learner asks — writing help, referencing, structure, or general questions — directly and specifically, not with a generic script. " +
-  "Always give a direct, concrete answer, including your best answer on specifics you're not fully certain of — never refuse or defer elsewhere. " +
-  "No filler openers, no restating the question, no hedging unless genuinely warranted. Default to 2-4 sentences or a tight list unless the question needs a full walkthrough. " +
-  "If the question is ambiguous, ask exactly one short clarifying question instead of guessing. Plain text, **bold** for key terms only, no headers, no emoji.";
-
-async function getAiFeedbackQA(question) {
-  var reason = puterUnavailableReason();
-  if (reason) throw new Error(reason);
-  feedbackChatHistory.push({ role: 'user', content: question });
-  var messages = [{ role: 'system', content: FEEDBACK_QA_SYSTEM_PROMPT }].concat(feedbackChatHistory);
-  var response = await puterChat(messages, { model: 'claude-sonnet-4-6', temperature: 0.2, max_tokens: 300 });
-  var text = extractAiText(response).trim();
-  if (!text) throw new Error('empty AI response');
-  feedbackChatHistory.push({ role: 'assistant', content: text });
-  return text;
+function getAiFeedbackQA(question) {
+  return thinkThen(function() { return answerQ(question); }, 600);
 }
 
 function sendFeedback() {
@@ -1933,27 +1803,14 @@ function sendFeedback() {
   if (looksLikeSubmission) {
     getAiAssignmentFeedback(q).then(function(result) {
       rmTyping('f-chat');
-      addBot('f-chat', formatAiReply(result));
-      lastFeedback = result;
-      document.getElementById('f-dlbtn').style.display = 'flex';
-    }).catch(function(err) {
-      console.warn('Puter AI feedback failed, using offline engine:', err);
-      rmTyping('f-chat');
-      addDiagNotice('f-chat', err);
-      var result = analyseText(q);
-      addBot('f-chat', result.replace(/\n/g, '<br>'));
+      addBot('f-chat', formatReport(result));
       lastFeedback = result;
       document.getElementById('f-dlbtn').style.display = 'flex';
     });
   } else {
     getAiFeedbackQA(q).then(function(result) {
       rmTyping('f-chat');
-      addBot('f-chat', formatAiReply(result));
-    }).catch(function(err) {
-      console.warn('Puter AI Q&A failed, using offline engine:', err);
-      rmTyping('f-chat');
-      addDiagNotice('f-chat', err);
-      addBot('f-chat', answerQ(q));
+      addBot('f-chat', result);
     });
   }
 }
@@ -1997,16 +1854,18 @@ function answerPortfolioQ(q) {
   if (/contact|linkedin|email section/i.test(t))
     return '<strong>Contact Section:</strong><br>Put your email and LinkedIn where they\'re impossible to miss — top or bottom of the page, not buried. Use a professional email (school email is fine) and make sure your LinkedIn headline matches what your portfolio is presenting.';
 
-  if (/structure|order|layout|sections|what should (i|my) (portfolio )?(have|include)/i.test(t))
+  // A named pillar (handled just below) beats the generic structure answer.
+  var mentionsPillar = /data scien|data analy|machine learning|kaggle|software|developer|engineer|coding|github|marketing|business|entrepreneur|management/i.test(t);
+  if (!mentionsPillar && /structure|order|layout|sections|look like|what should (i|my) (portfolio )?(have|include)/i.test(t))
     return '<strong>Recommended Structure (in order):</strong><br>1. Introduction / About Me<br>2. Skills (technical + soft)<br>3. Projects / Assignments (3-5 best, with outcomes)<br>4. Certifications<br>5. Contact<br><br><em>Ask me about any one section — e.g. "how do I write my bio" — for more detail.</em>';
 
-  if (/digital marketing|marketing/i.test(t))
+  if (/marketing|\bseo\b campaign|social media manag|content creat|brand/i.test(t))
     return '<strong>Digital Marketing Portfolio:</strong><br>Include campaign case studies with real numbers (reach, CTR, conversions), analytics screenshots, social media metrics, and any Google Ads / Meta Ads certifications. Show the strategy behind a campaign, not just the creative — that\'s what demonstrates competency, not just execution.';
 
-  if (/data science|data analy|machine learning|python|kaggle/i.test(t))
+  if (/data scien|data analy|machine learning|\bml\b|statistic|kaggle|python|\br\b(?! )|sql|power ?bi|tableau/i.test(t))
     return '<strong>Data Science Portfolio:</strong><br>Link your Kaggle profile and GitHub. Include 2-3 Python/R projects with visualisations (charts, not just code) and a short write-up of the dataset, method, and what you found. Employers skim for the visual output before reading code.';
 
-  if (/software|developer|engineer|coding|github/i.test(t))
+  if (/software|developer|\bdev\b|engineer|coding|programm|github|full.?stack|front.?end|back.?end/i.test(t))
     return '<strong>Software Engineering Portfolio:</strong><br>Lead with your GitHub. Link live/deployed projects where possible, not just repos. Show your tech stack per project, a couple of code samples, and — if relevant — a simple system architecture diagram. Working demos beat descriptions every time.';
 
   if (/business|entrepreneur|management/i.test(t))
@@ -2036,7 +1895,7 @@ function answerPortfolioQ(q) {
   if (/start|begin|where do i|first step|get started/i.test(t))
     return 'Start here: (1) decide Carrd (fast) or Framer (polished) based on how much time you have, (2) write your bio and gather 3-5 project write-ups BEFORE opening the builder — most time gets wasted rewriting content live in the editor, (3) pick a template, (4) drop your content in, (5) publish. Content first, design second.';
 
-  if (/what (do|should) i (put|write|include|add)/i.test(t))
+  if (/what (do|should) i (put|write|include|add)|what goes (in|on)/i.test(t))
     return 'At minimum: About Me, Skills, 3-5 Projects (with real outcomes), Certifications, Contact. If you\'re unsure what counts as a "project," any graded assignment with a clear outcome works — you don\'t need something outside coursework.';
 
   if (/job|interview|recruiter|employer|hiring/i.test(t))
@@ -2061,40 +1920,20 @@ function answerPortfolioQ(q) {
   return 'Here\'s how to think about "<em>' + (q.length > 80 ? q.substring(0,80)+'...' : q) + '</em>":<br><br>Whatever the specific question, ground the answer in your actual work: name what you did, show the real result (with numbers if possible), and use real screenshots or links rather than descriptions.<br><br>For tools, it\'s just two options — <strong>Carrd</strong> (fast, simple, free) or <strong>Framer</strong> (more polished, more time). Try asking me about a specific section — bio, skills, projects, certifications, contact — or your pillar (e.g. "data science portfolio") for more targeted advice.';
 }
 
-// ── LIVE AI (Puter.js — free, no API key, no cost to us) ─────
-// Puter.js gives free access to real AI models (Claude/GPT) directly from
-// the browser under a "user-pays" model, so it costs the org $0 no matter
-// how many learners use it. On a learner's first message it may briefly
-// show a free Puter sign-in popup (no card required) before responding.
+// ── PORTFOLIO REPLY DELIVERY ──────────────────
+// Answers come from answerPortfolioQ() above — in-browser, no sign-in,
+// no external service, instant.
 var portfolioChatHistory = [];
-var PORTFOLIO_SYSTEM_PROMPT = "You are MentorSync, the strict, precise virtual mentor for EduClaas learners (pillars: Business IT, Data Science, Digital Business, Software Engineering, Systems Management), available inside the Portfolio Support feature. " +
-  "Portfolio-building (structure, content, Carrd, Framer) is your specialty, but you are not limited to it — answer whatever the learner actually asks, including general academic, career, or study questions. Never redirect a question elsewhere; always give the most useful direct answer you can with the knowledge you have.\n\n" +
-  "ANSWER EVERY QUESTION — Always give a direct, concrete answer, including for pricing, features, or specifics you're not 100% certain of. Give your best current answer rather than deferring the learner elsewhere. Do not refuse or decline to answer.\n\n" +
-  "PRECISION — Answer the exact question asked, nothing more. No filler openers like 'Great question!' or 'I'd be happy to help.' No restating the question. No hedging language ('might', 'could potentially') unless genuine uncertainty exists. Every sentence must add new, concrete information — delete any sentence that doesn't.\n\n" +
-  "LENGTH — Default to 2-4 sentences or a tight 3-5 item list. Only go longer if the question explicitly asks for a full structure/walkthrough. Never pad for length.\n\n" +
-  "AMBIGUITY — If the question is ambiguous, ask exactly one short clarifying question instead of guessing — do not answer a vague question with a vague answer.\n\n" +
-  "TONE — Direct and matter-of-fact, not chatty. Skip encouragement/motivational filler; give the answer.\n\n" +
-  "FORMAT — Plain text, **bold** only for key terms, no markdown headers, no code blocks, no emoji.";
 
 function escapeHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
-function formatAiReply(text) {
+// Plain-text report (e.g. the assignment feedback) → safe HTML.
+function formatReport(text) {
   var safe = escapeHtml(text);
   safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   safe = safe.replace(/\n/g, '<br>');
   return safe;
-}
-function extractAiText(response) {
-  if (typeof response === 'string') return response;
-  if (response && response.message) {
-    var c = response.message.content;
-    if (typeof c === 'string') return c;
-    if (Array.isArray(c)) {
-      return c.map(function(block){ return block && block.text ? block.text : ''; }).join(' ').trim();
-    }
-  }
-  return response ? String(response) : '';
 }
 
 function sendPortfolio() {
@@ -2102,32 +1941,13 @@ function sendPortfolio() {
   var q = inp.value.trim(); if (!q) return;
   addUsr('p-chat', q); inp.value = '';
   addTyping('p-chat');
-
-  var puterReason = puterUnavailableReason();
-  if (puterReason) {
-    setTimeout(function() {
-      rmTyping('p-chat');
-      addDiagNotice('p-chat', new Error(puterReason));
-      addBot('p-chat', answerPortfolioQ(q));
-    }, 700);
-    return;
-  }
-
   portfolioChatHistory.push({ role: 'user', content: q });
-  var messages = [{ role: 'system', content: PORTFOLIO_SYSTEM_PROMPT }].concat(portfolioChatHistory);
-
-  puterChat(messages, { model: 'claude-sonnet-4-6', temperature: 0.2, max_tokens: 300 }).then(function(response) {
+  setTimeout(function() {
     rmTyping('p-chat');
-    var text = extractAiText(response).trim();
-    if (!text) throw new Error('empty AI response');
-    portfolioChatHistory.push({ role: 'assistant', content: text });
-    addBot('p-chat', formatAiReply(text));
-  }).catch(function(err) {
-    console.warn('Puter AI call failed, using offline engine:', err);
-    rmTyping('p-chat');
-    addDiagNotice('p-chat', err);
-    addBot('p-chat', answerPortfolioQ(q));
-  });
+    var reply = answerPortfolioQ(q);
+    portfolioChatHistory.push({ role: 'assistant', content: reply });
+    addBot('p-chat', reply);
+  }, 650);
 }
 
 // ── REMINDERS (demo) ──────────────────────────
