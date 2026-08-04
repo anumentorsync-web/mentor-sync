@@ -833,7 +833,7 @@ footer span { color: #fff; font-weight: 600; }
         <div class="af-info">Returning user: <b id="af-fb-name"></b></div>
         <button class="af-btn" onclick="useAF('feedback')">Use Saved Info ✓</button>
       </div>
-      <div class="form-grp"><label>School Email ID</label><input type="email" id="f-email" placeholder="yourname@educlaas.com"></div>
+      <div class="form-grp"><label>School Email ID</label><input type="text" inputmode="email" autocapitalize="off" id="f-email" placeholder="yourname@educlaas.com"></div>
       <div class="form-grp"><label>Your Full Name</label><input type="text" id="f-name-inp" placeholder="e.g. Chee Tai Wai"></div>
       <button class="capture-btn" onclick="startFeedback()">Continue →</button>
     </div>
@@ -880,13 +880,14 @@ footer span { color: #fff; font-weight: 600; }
         <div class="af-info">Returning user: <b id="af-po-name"></b></div>
         <button class="af-btn" onclick="useAF('portfolio')">Use Saved Info ✓</button>
       </div>
-      <div class="form-grp"><label>School Email ID</label><input type="email" id="p-email" placeholder="yourname@educlaas.com"></div>
+      <div class="form-grp"><label>School Email ID</label><input type="text" inputmode="email" autocapitalize="off" id="p-email" placeholder="yourname@educlaas.com"></div>
       <div class="form-grp"><label>Your Full Name</label><input type="text" id="p-name-inp" placeholder="e.g. Priya Sharma"></div>
       <button class="capture-btn" onclick="startPortfolio()">Continue →</button>
     </div>
     <!-- PORTFOLIO SCREEN -->
     <div id="p-main" style="display:none;">
       <div class="chat-area" id="p-chat">
+        <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot"><strong>Why build a portfolio?</strong><br>Your resume says what you studied — your portfolio proves what you can actually do. Employers, lecturers reviewing your work, or anyone assessing you use it as evidence: real projects, real outcomes, not just a list of modules. It's the thing you point someone to and say "here's proof."</div></div>
         <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot">Here is your portfolio guidance for EduClaas learners.</div></div>
         <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot"><strong>Recommended Structure:</strong><br>1. Introduction / About Me — a 3–4 sentence bio: who you are, your pillar (e.g. Digital Marketing, Data Science, Software Development), and what you're aiming for.<br>2. Skills — separate technical skills (tools, languages, frameworks) from soft skills.<br>3. Projects / Assignments — your 3–5 strongest pieces of work, each with the problem, what you did, and the outcome (quantify it where you can, e.g. "increased engagement by 20%").<br>4. Certifications — course completions, SkillsFuture-recognised credentials, any external certs.<br>5. Contact — email and LinkedIn, clearly visible, no digging required.</div></div>
         <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot"><strong>Tool 1 — Carrd</strong><br>Best if: you want a clean one-page portfolio live in ~30 minutes with no design experience needed.<br>How: go to carrd.co → Sign Up (free tier lets you build up to 3 sites) → pick a one-page template → replace each section with your own bio/skills/projects/contact → Publish → you get a shareable carrd.co link (or connect your own domain on a paid plan).<br>Limits: themes can't be swapped after you start, and CSS customisation is limited — fine for a simple, fast portfolio, less fine if you want a highly custom look.</div></div>
@@ -965,7 +966,7 @@ footer span { color: #fff; font-weight: 600; }
     <div id="e-capture" class="capture-screen">
       <div class="capture-title">👋 Welcome to Placement Eligibility Appeal</div>
       <div class="capture-sub">Please enter your details first. This helps us track your placement interest and eligibility status.</div>
-      <div class="form-grp"><label>School Email ID</label><input type="email" id="e-email" placeholder="yourname@educlaas.com"></div>
+      <div class="form-grp"><label>School Email ID</label><input type="text" inputmode="email" autocapitalize="off" id="e-email" placeholder="yourname@educlaas.com"></div>
       <div class="form-grp"><label>Your Full Name</label><input type="text" id="e-name-inp" placeholder="e.g. Li Wei"></div>
       <button class="capture-btn" onclick="startEligibility()">Continue →</button>
     </div>
@@ -1333,6 +1334,7 @@ function startFeedback() {
   document.getElementById('f-capture').style.display = 'none';
   document.getElementById('f-main').style.display = 'block';
   saveLearnerActivity(email, name, 'Assignment Feedback');
+  addBot('f-chat', '<strong>Why use this?</strong> This gives you a private, honest first read on your assignment before you submit it \u2014 catching gaps in structure, argument, or evidence early, while you can still fix them, instead of finding out only after grading.');
   addBot('f-chat', 'Hi ' + name + '! Upload your assignment or type a specific question. I will provide Areas for Improvement and an Estimated Grade.');
 }
 
@@ -1377,8 +1379,15 @@ function addUsr(chatId, txt) {
 function addTyping(chatId) {
   var c = document.getElementById(chatId);
   var d = document.createElement('div'); d.className = 'cm'; d.id = 'typ-' + chatId;
-  d.innerHTML = '<div class="cm-av bot">M</div><div class="cm-bub bot"><div class="typing-dots"><span></span><span></span><span></span></div></div>';
+  d.innerHTML = '<div class="cm-av bot">M</div><div class="cm-bub bot"><div class="typing-dots"><span></span><span></span><span></span></div><div class="typ-slow-note" style="display:none;font-size:11.5px;opacity:0.7;margin-top:6px;">Still thinking — longer or more detailed messages can take a bit more time…</div></div>';
   c.appendChild(d); c.scrollTop = c.scrollHeight;
+  setTimeout(function() {
+    var el = document.getElementById('typ-' + chatId);
+    if (el) {
+      var note = el.querySelector('.typ-slow-note');
+      if (note) { note.style.display = 'block'; c.scrollTop = c.scrollHeight; }
+    }
+  }, 6000);
 }
 function rmTyping(chatId) { var e = document.getElementById('typ-'+chatId); if(e) e.remove(); }
 
@@ -1773,7 +1782,7 @@ function withTimeout(promise, ms) {
   });
 }
 function puterChat(messages, opts) {
-  return withTimeout(puter.ai.chat(messages, opts), 20000);
+  return withTimeout(puter.ai.chat(messages, opts), 45000);
 }
 
 async function getAiAssignmentFeedback(submissionText) {
