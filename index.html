@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>MentorSync — EduClaas</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -31,7 +31,8 @@
 ═══════════════════════════════════════════ */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body { font-family: 'DM Sans', sans-serif; background: #F5F7FC; color: var(--text); min-height: 100vh; font-size: 16px; line-height: 1.5; }
+body { font-family: 'DM Sans', sans-serif; background: #F5F7FC; color: var(--text); min-height: 100vh; font-size: 16px; line-height: 1.5; overflow-x: hidden; -webkit-text-size-adjust: 100%; }
+img, svg, canvas { max-width: 100%; }
 button, input, label { font-family: 'DM Sans', sans-serif; }
 a { color: var(--navy); }
 
@@ -501,35 +502,84 @@ footer span { color: #fff; font-weight: 600; }
 /* ═══════════════════════════════════════════
    RESPONSIVE
 ═══════════════════════════════════════════ */
+/* tablets / small laptops */
+@media (max-width: 900px) {
+  .hero { padding: 40px 20px 46px; }
+  .main { max-width: 100%; }
+  .grid { gap: 14px; }
+}
+
 @media (max-width: 640px) {
   .grid { grid-template-columns: 1fr; }
+  .hero { padding: 32px 16px 38px; }
   .hero h1 { font-size: 22px; }
   .hero p { font-size: 13px; }
   .hero-tag { font-size: 12px; padding: 5px 11px; }
   .main { padding: 18px 12px 60px; }
+  .card-top { padding: 14px 16px; }
+  .card-body { padding: 16px; }
   .card-title { font-size: 17px; }
   .card-desc { font-size: 13px; }
+  .card-badge { font-size: 10px; padding: 3px 8px; }
+  .card-btn { padding: 12px 16px; font-size: 14px; }
   .pv-title { font-size: 15px; }
-  .pv-head { padding: 12px 12px; }
-  .pv-body { padding: 16px 13px 80px; }
-  .chat-area { height: 52vh; }
-  .cm-bub { font-size: 14px; }
-  .txt-in { font-size: 16px; }
+  .pv-head { padding: 12px 12px; padding-top: calc(12px + env(safe-area-inset-top)); }
+  .pv-body { padding: 16px 13px calc(80px + env(safe-area-inset-bottom)); }
+  .chat-area { height: 52vh; height: 52dvh; padding: 12px; }
+  .cm-bub { font-size: 14px; max-width: 88%; }
+  .txt-in { font-size: 16px; min-width: 0; }
   .send-btn { font-size: 14px; padding: 12px 14px; }
   .upload-lbl { padding: 20px 14px; }
   .form-grp input { font-size: 16px; }
-  .sub-btn { font-size: 15px; }
+  .sub-btn { font-size: 15px; padding: 15px; }
   .elig-label { font-size: 14px; }
   .dl-row { font-size: 13px; }
   .filters { flex-direction: column; }
-  footer { flex-direction: column; text-align: center; padding: 12px; }
+  .filter-box { min-width: 0; }
+  footer { flex-direction: column; text-align: center; padding: 12px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
   .usage-body { padding: 12px; }
-  .nav { padding: 0 12px; }
+  .usage-head { padding: 14px 16px; }
+  .usage-head-title { font-size: 15px; }
+  .usage-lock { font-size: 10px; padding: 3px 8px; }
+  .nav { padding: 0 12px; height: 58px; }
+  .logo-icon { width: 36px; height: 36px; font-size: 14px; }
+  .logo-text .name { font-size: 16px; }
+  .logo-text .tag { font-size: 9px; letter-spacing: 1px; }
   .pv-home span { display: none; }
+  .pv-home { padding: 6px 9px; }
+  .info-box { padding: 14px 15px; font-size: 14px; border-radius: 12px; }
+  .info-box-title { font-size: 15.5px; }
+  .info-box ul { margin-left: 18px; }
+  .info-note { font-size: 13px; }
+  .capture-screen { padding: 28px 4px; min-height: auto; }
+  .af-banner { flex-direction: column; align-items: stretch; text-align: center; }
+  .af-btn { width: 100%; padding: 11px 14px; }
+  .score-card { padding: 20px 16px; }
+  .chart-controls { gap: 6px; }
+  .ctrl-btn { padding: 8px 12px; }
+  /* 3-column KPI report fits on a phone — no side-scroll needed */
+  .kpi-tbl { min-width: 0; }
+  .kpi-tbl th, .kpi-tbl td { padding: 10px 8px; font-size: 12.5px; }
+  .kpi-tbl th { font-size: 10px; letter-spacing: 0.5px; }
 }
-@media (max-width: 380px) {
+
+@media (max-width: 400px) {
   .hero h1 { font-size: 19px; }
-  .pv-title { font-size: 13px; }
+  .pv-title { font-size: 14px; }
+  .logo-text .tag { display: none; }
+  .cm-bub { font-size: 13.5px; padding: 9px 12px; }
+  .cm-av { width: 24px; height: 24px; font-size: 10px; }
+  .info-box { padding: 13px; font-size: 13.5px; }
+  .info-box-title { font-size: 15px; }
+  .send-btn { padding: 12px; font-size: 13px; }
+  .card-badge { font-size: 9px; }
+  .score-num-big { font-size: 30px; }
+}
+
+/* landscape phones: keep the chat usable */
+@media (max-height: 520px) and (max-width: 900px) {
+  .chat-area { height: 46vh; min-height: 200px; }
+  .capture-screen { min-height: auto; padding: 20px 12px; }
 }
 
 .capture-screen { 
@@ -572,6 +622,38 @@ footer span { color: #fff; font-weight: 600; }
 .af-info { font-size: 14px; color: #fff; line-height: 1.4; }
 .af-info b { color: #C9A84C; }
 .af-btn { background: #C9A84C; color: #1B2E6B; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; font-family: "DM Sans",sans-serif; flex-shrink: 0; }
+
+/* ═══════════════════════════════════════════
+   FEATURE INFO BOX (shown at top of every feature)
+═══════════════════════════════════════════ */
+.info-box {
+  background: rgba(201,168,76,0.12);
+  border: 1.5px solid rgba(201,168,76,0.45);
+  border-left: 5px solid var(--gold);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--text);
+}
+.info-box-title {
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'Playfair Display', serif;
+  font-size: 16.5px; font-weight: 700; color: var(--navy);
+  margin-bottom: 8px;
+}
+.info-box p { margin-bottom: 8px; }
+.info-box p:last-child { margin-bottom: 0; }
+.info-box ul { margin: 8px 0 0 20px; padding: 0; }
+.info-box li { margin-bottom: 7px; }
+.info-box li:last-child { margin-bottom: 0; }
+.info-box b { color: var(--navy); }
+.info-note {
+  display: block; margin-top: 10px; padding-top: 10px;
+  border-top: 1px dashed rgba(201,168,76,0.6);
+  font-size: 13.5px; color: var(--muted);
+}
 
 
 
@@ -818,12 +900,16 @@ footer span { color: #fff; font-weight: 600; }
     </div>
   </div>
   <div class="pv-body">
-    <div style="background:rgba(201,168,76,0.12);border:1.5px solid rgba(201,168,76,0.4);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12.5px;color:var(--muted);line-height:1.5;">
-      🤖 <b style="color:var(--navy);">This now runs on a live AI model (via Puter.js) that reads your actual submission.</b>
-      <ul style="margin:8px 0 0 18px;padding:0;">
-        <li>Feedback and grade are generated from what you actually wrote — not a fixed keyword checklist — and it can handle subject-specific/complex terminology across any pillar.</li>
-        <li>It's still not connected to our organisation's <b style="color:var(--navy);">LMS knowledge base</b>, so it can't grade against our own course-specific rubrics yet — that would need a separate integration with the LMS.</li>
+    <div class="info-box">
+      <div class="info-box-title">📋 What this feature does</div>
+      <p>Get a second opinion on your assignment <b>before</b> you submit it — so you can fix the weak parts while there's still time.</p>
+      <ul>
+        <li><b>Upload or paste</b> your assignment (PDF, DOCX, PPT or text).</li>
+        <li>A live AI model <b>reads what you actually wrote</b> and returns clear <b>areas for improvement</b> plus an <b>estimated grade out of 100</b>.</li>
+        <li><b>Act on it:</b> fix the flagged points, re-upload, and see if the estimate moves up.</li>
+        <li>Download the feedback as a report to keep or share with your mentor.</li>
       </ul>
+      <span class="info-note">⚠️ Not yet connected to the EduClaas LMS, so it grades on general academic standards — not your exact course rubric. Treat the grade as a guide, not your official mark.</span>
     </div>
     <!-- CAPTURE SCREEN -->
     <div id="f-capture" class="capture-screen">
@@ -872,6 +958,16 @@ footer span { color: #fff; font-weight: 600; }
     </div>
   </div>
   <div class="pv-body">
+    <div class="info-box">
+      <div class="info-box-title">🗂️ What a portfolio is for</div>
+      <p>A portfolio is your <b>proof of work</b>. Your certificate says what you studied; your portfolio shows what you can actually <b>do</b> — real projects, real results, in one link you can send to anyone.</p>
+      <ul>
+        <li><b>Job applications:</b> recruiters shortlist on evidence, not module lists. One link beats a paragraph of claims.</li>
+        <li><b>Placement &amp; capstone:</b> it's the artefact your mentor and the Talent Acquisition team review when assessing your readiness.</li>
+        <li><b>Yourself:</b> building it forces you to name what you learned and what you produced — useful for interviews.</li>
+      </ul>
+      <p style="margin-top:10px;">This feature walks you through <b>what to put in it</b>, <b>how to structure it</b>, and <b>how to build it free</b> with Carrd or Framer. Ask anything specific to your pillar in the chat below.</p>
+    </div>
     <!-- CAPTURE -->
     <div id="p-capture" class="capture-screen">
       <div class="capture-title">👋 Welcome to Portfolio Support</div>
@@ -887,7 +983,6 @@ footer span { color: #fff; font-weight: 600; }
     <!-- PORTFOLIO SCREEN -->
     <div id="p-main" style="display:none;">
       <div class="chat-area" id="p-chat">
-        <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot"><strong>Why build a portfolio?</strong><br>Your resume says what you studied — your portfolio proves what you can actually do. Employers, lecturers reviewing your work, or anyone assessing you use it as evidence: real projects, real outcomes, not just a list of modules. It's the thing you point someone to and say "here's proof."</div></div>
         <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot">Here is your portfolio guidance for EduClaas learners.</div></div>
         <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot"><strong>Recommended Structure:</strong><br>1. Introduction / About Me — a 3–4 sentence bio: who you are, your pillar (e.g. Digital Marketing, Data Science, Software Development), and what you're aiming for.<br>2. Skills — separate technical skills (tools, languages, frameworks) from soft skills.<br>3. Projects / Assignments — your 3–5 strongest pieces of work, each with the problem, what you did, and the outcome (quantify it where you can, e.g. "increased engagement by 20%").<br>4. Certifications — course completions, SkillsFuture-recognised credentials, any external certs.<br>5. Contact — email and LinkedIn, clearly visible, no digging required.</div></div>
         <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot"><strong>Tool 1 — Carrd</strong><br>Best if: you want a clean one-page portfolio live in ~30 minutes with no design experience needed.<br>How: go to carrd.co → Sign Up (free tier lets you build up to 3 sites) → pick a one-page template → replace each section with your own bio/skills/projects/contact → Publish → you get a shareable carrd.co link (or connect your own domain on a paid plan).<br>Limits: themes can't be swapped after you start, and CSS customisation is limited — fine for a simple, fast portfolio, less fine if you want a highly custom look.</div></div>
@@ -917,13 +1012,15 @@ footer span { color: #fff; font-weight: 600; }
     </div>
   </div>
   <div class="pv-body">
-    <div style="background:rgba(201,168,76,0.12);border:1.5px solid rgba(201,168,76,0.4);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12.5px;color:var(--muted);line-height:1.5;">
-      🔗 <b style="color:var(--navy);">This is a working demo using sample data.</b>
-      <ul style="margin:8px 0 0 18px;padding:0;">
-        <li>To go live, this needs to be connected to the <b style="color:var(--navy);">Microsoft Teams workflow bot</b>.</li>
-        <li>Once connected, clicking "Send Reminder" below will trigger the bot to automatically post the reminder into the learner's individual Teams chat.</li>
-        <li>The flow here shows just a preview of how it will work.</li>
+    <div class="info-box">
+      <div class="info-box-title">🔔 What this feature does</div>
+      <p>Stops learners missing deadlines because nobody told them. Look up a learner, see every assignment due, and push a reminder straight to their chat — no manual chasing.</p>
+      <ul>
+        <li><b>Enter</b> the learner's name and cohort code.</li>
+        <li><b>Review</b> their upcoming deadlines before anything is sent.</li>
+        <li><b>Send</b> — the reminder is delivered to that learner personally.</li>
       </ul>
+      <span class="info-note">🔗 Demo with sample data. Going live needs the <b>Microsoft Teams workflow bot</b> connected; once it is, "Send Reminder" posts the message into the learner's individual Teams chat automatically.</span>
     </div>
 
     <!-- STEP 1: LOOKUP -->
@@ -962,6 +1059,16 @@ footer span { color: #fff; font-weight: 600; }
     </div>
   </div>
   <div class="pv-body">
+    <div class="info-box">
+      <div class="info-box-title">🎓 What this feature does</div>
+      <p>Placement isn't automatic — you have to show you've met the criteria. This checks where you stand <b>before</b> you appeal, so you know what's still missing.</p>
+      <ul>
+        <li><b>Tick</b> each criterion you've met and <b>attach proof</b> for it.</li>
+        <li><b>Submit</b> to get an eligibility score out of 100 with a breakdown per criterion.</li>
+        <li><b>Anything unmet</b> shows up in the report — fix those, then re-submit.</li>
+      </ul>
+      <span class="info-note">📌 Your result is logged in the admin dashboard for the Talent Acquisition team to review.</span>
+    </div>
     <!-- CAPTURE -->
     <div id="e-capture" class="capture-screen">
       <div class="capture-title">👋 Welcome to Placement Eligibility Appeal</div>
@@ -1044,7 +1151,7 @@ footer span { color: #fff; font-weight: 600; }
       <div class="kpi-report">
         <div class="kpi-report-head"><div class="kpi-report-title">📊 Placement Eligibility Report</div></div>
         <div class="tbl-wrap">
-          <table>
+          <table class="kpi-tbl">
             <thead><tr><th>KPI Criteria</th><th>Status</th><th>Score</th></tr></thead>
             <tbody id="kpi-rows"></tbody>
           </table>
