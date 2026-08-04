@@ -1,0 +1,10 @@
+name = "mentorsync-ai"
+main = "worker.js"
+compatibility_date = "2026-08-04"
+
+# The Anthropic API key is NOT set here. Secrets never belong in a file that
+# gets committed. Set it once, encrypted, with:
+#
+#   wrangler secret put ANTHROPIC_API_KEY
+#
+# See README.md in this folder.

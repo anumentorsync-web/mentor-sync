@@ -911,7 +911,7 @@ footer span { color: #fff; font-weight: 600; }
         <li><b>Act on it:</b> fix the flagged points, re-upload, and see if the estimate moves up.</li>
         <li>Download the feedback as a report to keep or share with your mentor.</li>
       </ul>
-      <span class="info-note">🔒 Runs entirely in your browser — <b>no sign-in, no account, nothing to install</b>, and your assignment is never uploaded anywhere. It checks structure, argument, evidence and referencing against general academic standards, not your exact course rubric, so treat the grade as a guide rather than your official mark.</span>
+      <span class="info-note">🔒 <b>No sign-in, no account, nothing to install.</b> It grades against general academic standards — structure, argument, evidence and referencing — not your exact course rubric, so treat the grade as a guide rather than your official mark.</span>
     </div>
     <!-- CAPTURE SCREEN -->
     <div id="f-capture" class="capture-screen">
@@ -1764,14 +1764,49 @@ function doDownload() {
   a.download = 'MentorSync_Feedback.txt'; a.click();
 }
 
+// ── AI BACKEND CONFIG ─────────────────────────
+// URL of the MentorSync AI proxy (see worker/README.md). The API key lives in
+// that Worker, never in this page — anything shipped to the browser is public.
+// Leave this empty and every feature still works using the built-in offline
+// engine below; fill it in to get live AI answers.
+var MS_AI_ENDPOINT = '';
+
+var AI_TIMEOUT_MS = 45000;
+
+function aiConfigured() {
+  return typeof MS_AI_ENDPOINT === 'string' && MS_AI_ENDPOINT.indexOf('http') === 0;
+}
+
+// Calls the proxy. Rejects on any failure so every caller can fall back to the
+// offline engine — a backend outage degrades the feature, it never breaks it.
+function askAI(mode, messages) {
+  if (!aiConfigured()) return Promise.reject(new Error('AI endpoint not configured'));
+
+  var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var timer = setTimeout(function() { if (controller) controller.abort(); }, AI_TIMEOUT_MS);
+
+  return fetch(MS_AI_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode: mode, messages: messages }),
+    signal: controller ? controller.signal : undefined
+  }).then(function(res) {
+    return res.json().catch(function() { throw new Error('Bad response from AI service'); });
+  }).then(function(data) {
+    if (!data || !data.text) throw new Error((data && data.error) || 'Empty AI response');
+    return data.text;
+  }).finally(function() {
+    clearTimeout(timer);
+  });
+}
+
 // ── ASSIGNMENT FEEDBACK ENGINE ────────────────
-// Runs entirely in the browser: no sign-in, no popup, no API key, no
-// network call. The learner's assignment text never leaves their device.
-// analyseText() (below) does the actual structural read and grading.
+// Live AI when the proxy is configured; otherwise the offline structural
+// engine below (analyseText / answerQ), which needs no sign-in and no network.
 var FEEDBACK_MAX_CHARS = 300000; // ~50k words — longer submissions are read up to this point.
 
 // Small deliberate delay so the typing indicator is visible and the reply
-// doesn't flash in instantly — purely cosmetic.
+// doesn't flash in instantly — purely cosmetic, offline path only.
 function thinkThen(fn, ms) {
   return new Promise(function(resolve, reject) {
     setTimeout(function() {
@@ -1784,11 +1819,29 @@ function getAiAssignmentFeedback(submissionText) {
   var text = submissionText.length > FEEDBACK_MAX_CHARS
     ? submissionText.slice(0, FEEDBACK_MAX_CHARS)
     : submissionText;
-  return thinkThen(function() { return analyseText(text); }, 800);
+
+  return askAI('feedback', [
+    { role: 'user', content: 'Here is my submission:\n\n' + text }
+  ]).catch(function(err) {
+    console.warn('Live AI unavailable, using offline engine:', err.message);
+    return thinkThen(function() { return analyseText(text); }, 400);
+  });
 }
 
+// Q&A keeps its own history so follow-up questions stay in context.
+var feedbackChatHistory = [];
+
 function getAiFeedbackQA(question) {
-  return thinkThen(function() { return answerQ(question); }, 600);
+  feedbackChatHistory.push({ role: 'user', content: question });
+
+  return askAI('feedback_qa', feedbackChatHistory).then(function(text) {
+    feedbackChatHistory.push({ role: 'assistant', content: text });
+    return formatReport(text);
+  }).catch(function(err) {
+    console.warn('Live AI unavailable, using offline engine:', err.message);
+    feedbackChatHistory.pop();
+    return thinkThen(function() { return answerQ(question); }, 400);
+  });
 }
 
 function sendFeedback() {
@@ -1942,12 +1995,19 @@ function sendPortfolio() {
   addUsr('p-chat', q); inp.value = '';
   addTyping('p-chat');
   portfolioChatHistory.push({ role: 'user', content: q });
-  setTimeout(function() {
+
+  askAI('portfolio', portfolioChatHistory).then(function(text) {
     rmTyping('p-chat');
-    var reply = answerPortfolioQ(q);
-    portfolioChatHistory.push({ role: 'assistant', content: reply });
-    addBot('p-chat', reply);
-  }, 650);
+    portfolioChatHistory.push({ role: 'assistant', content: text });
+    addBot('p-chat', formatReport(text));
+  }).catch(function(err) {
+    console.warn('Live AI unavailable, using offline engine:', err.message);
+    rmTyping('p-chat');
+    portfolioChatHistory.pop();
+    setTimeout(function() {
+      addBot('p-chat', answerPortfolioQ(q));
+    }, 200);
+  });
 }
 
 // ── REMINDERS (demo) ──────────────────────────
