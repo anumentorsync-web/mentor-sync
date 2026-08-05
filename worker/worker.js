@@ -27,6 +27,10 @@ const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 // Set a plain GEMINI_MODEL variable in the Worker's settings to pin one.
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
+// Bumped whenever this file changes. Reported by ?selftest=1 so a stale
+// deploy is visible instead of being mistaken for a broken key.
+const WORKER_VERSION = '2026-08-04-e';
+
 // Fallbacks used only if the model list itself cannot be fetched.
 const GEMINI_FALLBACKS = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-pro-latest'];
 
@@ -54,29 +58,29 @@ function rankGeminiModel(name) {
   return score;
 }
 
+// Every model this key can call, best first. Empty if the list can't be read.
+async function discoverGeminiModels(env) {
+  try {
+    const res = await listGeminiModels(env);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.models || [])
+      .filter(function (m) {
+        return (m.supportedGenerationMethods || []).indexOf('generateContent') !== -1;
+      })
+      .map(function (m) { return String(m.name).replace(/^models\//, ''); })
+      .filter(function (n) { return rankGeminiModel(n) > -1000; })
+      .sort(function (a, b) { return rankGeminiModel(b) - rankGeminiModel(a); });
+  } catch (e) {
+    return [];
+  }
+}
+
 async function resolveGeminiModel(env) {
   if (env.GEMINI_MODEL) return env.GEMINI_MODEL;
   if (resolvedGeminiModel) return resolvedGeminiModel;
-
-  try {
-    const res = await listGeminiModels(env);
-    if (res.ok) {
-      const data = await res.json();
-      const usable = (data.models || [])
-        .filter(function (m) {
-          return (m.supportedGenerationMethods || []).indexOf('generateContent') !== -1;
-        })
-        .map(function (m) { return String(m.name).replace(/^models\//, ''); })
-        .filter(function (n) { return rankGeminiModel(n) > -1000; })
-        .sort(function (a, b) { return rankGeminiModel(b) - rankGeminiModel(a); });
-      if (usable.length) {
-        resolvedGeminiModel = usable[0];
-        return resolvedGeminiModel;
-      }
-    }
-  } catch (e) { /* fall through to the static list */ }
-
-  resolvedGeminiModel = GEMINI_FALLBACKS[0];
+  const usable = await discoverGeminiModels(env);
+  resolvedGeminiModel = usable.length ? usable[0] : GEMINI_FALLBACKS[0];
   return resolvedGeminiModel;
 }
 
@@ -211,11 +215,18 @@ async function postGemini(env, model, mode, messages) {
 async function callGemini(env, mode, messages) {
   const first = await resolveGeminiModel(env);
   let res = await postGemini(env, first, mode, messages);
-  if (res.status !== 404 || env.GEMINI_MODEL) return res;
+  if (res.status !== 404) { resolvedGeminiModel = first; return res; }
 
+  // 404 means the model is gone. A pinned GEMINI_MODEL is treated as a
+  // preference, not a contract, so a retired pin cannot take the app down.
   resolvedGeminiModel = null;
-  for (const candidate of GEMINI_FALLBACKS) {
-    if (candidate === first) continue;
+  const tried = [first];
+  const discovered = await discoverGeminiModels(env);
+  const candidates = discovered.concat(GEMINI_FALLBACKS);
+
+  for (const candidate of candidates) {
+    if (tried.indexOf(candidate) !== -1) continue;
+    tried.push(candidate);
     res = await postGemini(env, candidate, mode, messages);
     if (res.status !== 404) {
       resolvedGeminiModel = candidate;
@@ -259,7 +270,7 @@ function callAnthropic(apiKey, mode, messages) {
 async function selfTest(env, origin) {
   const provider = providerOf(env);
   if (!provider) {
-    return json({ ok: false, step: 'api key', detail:
+    return json({ ok: false, version: WORKER_VERSION, step: 'api key', detail:
       'No API key secret is set on this Worker. Add one under Settings > Variables and Secrets, named exactly GEMINI_API_KEY (free tier) or ANTHROPIC_API_KEY (paid).' }, 200, origin);
   }
   let res;
@@ -267,11 +278,14 @@ async function selfTest(env, origin) {
     res = await callModel(env, 'portfolio',
       [{ role: 'user', content: 'Reply with the single word OK.' }]);
   } catch (e) {
-    return json({ ok: false, provider: provider, step: 'network', detail: 'Worker could not reach the model provider: ' + e.message }, 200, origin);
+    return json({ ok: false, version: WORKER_VERSION, provider: provider, step: 'network', detail: 'Worker could not reach the model provider: ' + e.message }, 200, origin);
   }
   const raw = await res.text();
   if (!res.ok) {
-    const body = { ok: false, provider: provider, step: 'provider rejected the request',
+    const body = { ok: false, version: WORKER_VERSION, provider: provider,
+      model: resolvedGeminiModel || env.GEMINI_MODEL || null,
+      pinned: env.GEMINI_MODEL || null,
+      step: 'provider rejected the request',
       http: res.status, detail: errorReason(raw, res.status) };
     // Only offered once the provider has actually refused, and only as a
     // hint: key formats change, so this is not treated as a validity rule.
@@ -287,8 +301,10 @@ async function selfTest(env, origin) {
   const text = extractText(provider, data);
   return json({
     ok: !!text,
+    version: WORKER_VERSION,
     provider: provider,
     model: provider === 'gemini' ? (resolvedGeminiModel || env.GEMINI_MODEL) : MODEL,
+    pinned: env.GEMINI_MODEL || null,
     step: text ? 'done' : 'empty reply',
     reply: text,
   }, 200, origin);
