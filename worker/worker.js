@@ -29,7 +29,7 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
 // Bumped whenever this file changes. Reported by ?selftest=1 so a stale
 // deploy is visible instead of being mistaken for a broken key.
-const WORKER_VERSION = '2026-08-04-e';
+const WORKER_VERSION = '2026-08-04-f';
 
 // Fallbacks used only if the model list itself cannot be fetched.
 const GEMINI_FALLBACKS = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-pro-latest'];
@@ -180,9 +180,13 @@ function json(body, status, origin) {
 // Gemini's shape differs from Anthropic's: the system prompt is its own
 // field, roles are user/model rather than user/assistant, and the text sits
 // under parts[].
-function geminiBody(mode, messages) {
+// Gemini's request schema differs across generations: 2.x accepts
+// thinkingConfig.thinkingBudget, 3.x rejects it as an invalid argument.
+// Rather than track which model wants which, the body is built in three
+// progressively simpler variants and the first the model accepts is used.
+function geminiBody(mode, messages, variant) {
   const config = MODES[mode];
-  return {
+  const body = {
     systemInstruction: { parts: [{ text: config.system }] },
     contents: messages.map(function (m) {
       return {
@@ -190,31 +194,57 @@ function geminiBody(mode, messages) {
         parts: [{ text: m.content }],
       };
     }),
-    generationConfig: {
+  };
+
+  if (variant === 0) {
+    // Reasoning off, whole budget to the reply. Accepted by 2.x.
+    body.generationConfig = {
       maxOutputTokens: config.maxTokens,
       temperature: 0.3,
-      // Flash reasons before answering and that shares the output budget,
-      // exactly like the Anthropic path. Turn it off so the whole budget
-      // goes to the reply.
       thinkingConfig: { thinkingBudget: 0 },
-    },
-  };
+    };
+  } else if (variant === 1) {
+    // No thinking control. Reasoning may be on and shares the output budget,
+    // so the budget is doubled to leave room for an actual answer.
+    body.generationConfig = {
+      maxOutputTokens: config.maxTokens * 2,
+      temperature: 0.3,
+    };
+  }
+  // variant 2: no generationConfig at all — provider defaults.
+  return body;
 }
 
-async function postGemini(env, model, mode, messages) {
+const GEMINI_VARIANTS = 3;
+
+async function postGemini(env, model, mode, messages, variant) {
   return fetch(geminiUrl(model) + '?key=' + encodeURIComponent(env.GEMINI_API_KEY), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(geminiBody(mode, messages)),
+    body: JSON.stringify(geminiBody(mode, messages, variant)),
   });
 }
 
-// A retired model answers 404. Rather than fail, drop the cached choice and
-// work through the fallbacks so the app keeps running when Google renames
-// something.
+// Remembers which body shape this model accepted, so the retry ladder is
+// walked once rather than on every request.
+let geminiVariant = 0;
+
+async function postGeminiAdaptive(env, model, mode, messages) {
+  let res = await postGemini(env, model, mode, messages, geminiVariant);
+  if (res.status !== 400) return res;
+
+  for (let v = 0; v < GEMINI_VARIANTS; v++) {
+    if (v === geminiVariant) continue;
+    const attempt = await postGemini(env, model, mode, messages, v);
+    if (attempt.status !== 400) { geminiVariant = v; return attempt; }
+    res = attempt;
+  }
+  return res; // every shape rejected — return the last so the reason surfaces
+}
+
 async function callGemini(env, mode, messages) {
   const first = await resolveGeminiModel(env);
-  let res = await postGemini(env, first, mode, messages);
+  let res = await postGeminiAdaptive(env, first, mode, messages);
   if (res.status !== 404) { resolvedGeminiModel = first; return res; }
 
   // 404 means the model is gone. A pinned GEMINI_MODEL is treated as a
@@ -227,7 +257,7 @@ async function callGemini(env, mode, messages) {
   for (const candidate of candidates) {
     if (tried.indexOf(candidate) !== -1) continue;
     tried.push(candidate);
-    res = await postGemini(env, candidate, mode, messages);
+    res = await postGeminiAdaptive(env, candidate, mode, messages);
     if (res.status !== 404) {
       resolvedGeminiModel = candidate;
       return res;
@@ -289,8 +319,11 @@ async function selfTest(env, origin) {
       http: res.status, detail: errorReason(raw, res.status) };
     // Only offered once the provider has actually refused, and only as a
     // hint: key formats change, so this is not treated as a validity rule.
-    if (provider === 'gemini' && (res.status === 400 || res.status === 401 || res.status === 403)) {
-      body.hint = 'If this is a key problem, check it came from https://aistudio.google.com/apikey (Get API key) rather than from Google Cloud credentials, and that the Generative Language API is enabled for its project.';
+    // Only suggest a key problem when the error actually looks like one —
+    // a 400 about request arguments is not a credentials issue.
+    if (provider === 'gemini' &&
+        (res.status === 401 || res.status === 403 || /API key|credential|permission/i.test(body.detail))) {
+      body.hint = 'Check the key came from https://aistudio.google.com/apikey (Get API key) rather than from Google Cloud credentials, and that the Generative Language API is enabled for its project.';
     }
     return json(body, 200, origin);
   }
@@ -305,6 +338,7 @@ async function selfTest(env, origin) {
     provider: provider,
     model: provider === 'gemini' ? (resolvedGeminiModel || env.GEMINI_MODEL) : MODEL,
     pinned: env.GEMINI_MODEL || null,
+    bodyVariant: geminiVariant,
     step: text ? 'done' : 'empty reply',
     reply: text,
   }, 200, origin);
