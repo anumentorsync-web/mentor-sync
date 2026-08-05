@@ -1420,6 +1420,14 @@ function startEligibility() {
 // Reset capture screens when page closes - handled by closePage()
 
 // ── CHAT HELPERS ──────────────────────────────
+// Shown once per failed live-AI reply so the cause is visible in the app
+// rather than buried in the console.
+function addAiFallbackNotice(chatId) {
+  if (!aiConfigured() || !lastAiError) return;
+  addBot(chatId, '<span style="opacity:0.75;font-size:12.5px;">\u26a0\ufe0f Live AI unavailable (' +
+    escapeHtml(lastAiError) + ') \u2014 showing the built-in answer instead.</span>');
+}
+
 function addBot(chatId, html) {
   var c = document.getElementById(chatId);
   var d = document.createElement('div'); d.className = 'cm';
@@ -1788,6 +1796,19 @@ function aiConfigured() { return aiEndpoint() !== ''; }
 
 // Calls the proxy. Rejects on any failure so every caller can fall back to the
 // offline engine — a backend outage degrades the feature, it never breaks it.
+// Last live-AI failure reason, surfaced in the chat so a broken backend is
+// visible instead of silently degrading into generic offline answers.
+var lastAiError = '';
+
+// Type msAiTest() in the browser console for a one-line health check.
+function msAiTest() {
+  if (!aiConfigured()) { console.log('MS_AI_ENDPOINT is not set.'); return; }
+  console.log('Testing ' + aiEndpoint() + ' ...');
+  askAI('portfolio', [{ role: 'user', content: 'Reply with the single word OK.' }])
+    .then(function(t) { console.log('%c LIVE AI WORKING ', 'background:#16a34a;color:#fff', t); })
+    .catch(function(e) { console.log('%c LIVE AI FAILED ', 'background:#dc2626;color:#fff', e.message); });
+}
+
 function askAI(mode, messages) {
   if (!aiConfigured()) return Promise.reject(new Error('AI endpoint not configured'));
 
@@ -1800,10 +1821,20 @@ function askAI(mode, messages) {
     body: JSON.stringify({ mode: mode, messages: messages }),
     signal: controller ? controller.signal : undefined
   }).then(function(res) {
-    return res.json().catch(function() { throw new Error('Bad response from AI service'); });
-  }).then(function(data) {
-    if (!data || !data.text) throw new Error((data && data.error) || 'Empty AI response');
-    return data.text;
+    return res.json().then(function(data) { return { status: res.status, data: data }; },
+      function() { throw new Error('HTTP ' + res.status + ' — response was not JSON'); });
+  }).then(function(r) {
+    if (!r.data || !r.data.text) {
+      throw new Error((r.data && r.data.error) || ('HTTP ' + r.status + ' — empty response'));
+    }
+    lastAiError = '';
+    return r.data.text;
+  }).catch(function(err) {
+    var msg = err && err.message ? err.message : String(err);
+    if (err && err.name === 'AbortError') msg = 'Timed out after ' + (AI_TIMEOUT_MS / 1000) + 's';
+    else if (msg === 'Failed to fetch') msg = 'Could not reach the Worker (blocked by CORS, offline, or wrong URL)';
+    lastAiError = msg;
+    throw new Error(msg);
   }).finally(function() {
     clearTimeout(timer);
   });
@@ -1833,6 +1864,7 @@ function getAiAssignmentFeedback(submissionText) {
     { role: 'user', content: 'Here is my submission:\n\n' + text }
   ]).catch(function(err) {
     console.warn('Live AI unavailable, using offline engine:', err.message);
+    addAiFallbackNotice('f-chat');
     return thinkThen(function() { return analyseText(text); }, 400);
   });
 }
@@ -1849,6 +1881,7 @@ function getAiFeedbackQA(question) {
   }).catch(function(err) {
     console.warn('Live AI unavailable, using offline engine:', err.message);
     feedbackChatHistory.pop();
+    addAiFallbackNotice('f-chat');
     return thinkThen(function() { return answerQ(question); }, 400);
   });
 }
@@ -2013,6 +2046,7 @@ function sendPortfolio() {
     console.warn('Live AI unavailable, using offline engine:', err.message);
     rmTyping('p-chat');
     portfolioChatHistory.pop();
+    addAiFallbackNotice('p-chat');
     setTimeout(function() {
       addBot('p-chat', answerPortfolioQ(q));
     }, 200);
