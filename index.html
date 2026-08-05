@@ -1508,66 +1508,222 @@ function pickSubstantiveParagraph(paragraphs, fromEnd) {
   return list[0] || '';
 }
 
+// ── OFFLINE ANALYSIS ENGINE ───────────────────
+// Scores a submission across six weighted dimensions using signals measured
+// from the actual text, and quotes the learner's own sentences so the
+// feedback is about their work rather than about essays in general.
+
+var CITATION_RE = /\([A-Z][A-Za-z\-']+(?:\s+(?:and|&|et al\.?)\s+[A-Z][A-Za-z\-']+)?,?\s*(?:\d{4}|n\.d\.)[a-z]?(?:,\s*p+\.?\s*\d+)?\)|\b[A-Z][A-Za-z\-']+\s+\(\d{4}\)|doi:\s*\S+/g;
+var CRITICAL_RE = /\b(however|although|though|whereas|conversely|in contrast|on the other hand|nevertheless|nonetheless|despite|a limitation|limitations of|critique|criticis|arguably|it could be argued|this suggests|this implies|on balance|alternatively|counter-?argument|by comparison)\b/gi;
+var EXAMPLE_RE = /\b(for example|for instance|such as|e\.g\.|to illustrate|specifically|namely|a case in point|case study|as (?:seen|shown|demonstrated) (?:in|by))\b/gi;
+var THEORY_RE = /\b(theory|theoretical|framework|model|paradigm|according to|as (?:noted|argued|observed) by|research (?:shows|suggests|indicates|finds)|studies (?:show|suggest|indicate)|literature)\b/gi;
+var TRANSITION_RE = /\b(furthermore|moreover|in addition|additionally|consequently|therefore|thus|as a result|building on|this section|firstly|secondly|finally|in turn)\b/gi;
+var DATA_RE = /\b\d+(?:\.\d+)?\s?%|\b(?:USD|SGD|\$|€|£)\s?\d|\b\d{2,}(?:,\d{3})+\b|\b\d+(?:\.\d+)?\s?(?:million|billion|thousand|percent|respondents|participants|users|customers)\b/gi;
+var VAGUE_RE = /\b(a lot of|lots of|very|really|things|stuff|good|bad|nice|huge|many people say|some say|it is well known)\b/gi;
+var INFORMAL_RE = /\b(i think|i feel|i believe|in my opinion|to be honest|obviously|of course)\b/gi;
+var STOPWORDS = ' the a an and or but of to in for on with as is are was were be been being that this these those it its by from at will can may has have had not their there which who whom what when where how than then also such more most other into over under between about across per '; 
+
+function countMatches(text, re) {
+  var m = text.match(re);
+  return m ? m.length : 0;
+}
+function per1000(n, wc) { return wc > 0 ? (n * 1000) / wc : 0; }
+function clamp01(x) { return x < 0 ? 0 : (x > 1 ? 1 : x); }
+function pct(part, whole) { return whole > 0 ? Math.round((part / whole) * 100) : 0; }
+
+// Most-repeated meaningful word — flags a submission circling one idea.
+function topRepeatedWord(words) {
+  var counts = {}, best = null, bestN = 0;
+  for (var i = 0; i < words.length; i++) {
+    var w = words[i].toLowerCase().replace(/[^a-z\-]/g, '');
+    if (w.length < 5 || STOPWORDS.indexOf(' ' + w + ' ') !== -1) continue;
+    counts[w] = (counts[w] || 0) + 1;
+    if (counts[w] > bestN) { bestN = counts[w]; best = w; }
+  }
+  return { word: best, count: bestN };
+}
+
 function analyseText(rawText) {
   var text = stripBoilerplate(rawText);
-  var words = text.split(/\s+/).filter(function(w){return w.length>0;});
+  var words = text.split(/\s+/).filter(function(w){ return w.length > 0; });
   var wc = words.length;
   var sentences = splitSentences(text);
   var paragraphs = splitParagraphs(text);
-  var avgSentLen = sentences.length ? Math.round(wc / sentences.length) : 0;
+  var sc = sentences.length;
+  var pc = paragraphs.length;
+
+  if (wc < 40) {
+    return 'Areas for Improvement\n' +
+      '• There are only ' + wc + ' words here — too little to assess. Paste or upload the full assignment and I will read all of it.' +
+      '\n\nEstimated Grade\nNot graded — there is not enough text to judge.';
+  }
+
+  var avgSentLen = sc ? Math.round(wc / sc) : wc;
   var openPara = pickSubstantiveParagraph(paragraphs, false);
   var closePara = pickSubstantiveParagraph(paragraphs, true);
 
-  var hasRef = /\([A-Z][a-zA-Z\-]+,?\s*\d{4}\)|reference list|bibliography|et al\.?|doi:/i.test(text);
-  var hasConc = /\b(conclusion|in summary|to conclude|overall|in conclusion|to sum up)\b/i.test(text.slice(-400));
-  var hasIntro = !!openPara && /\b(this (essay|assignment|report|paper)|this study|the aim of this|this discussion)\b/i.test(openPara);
-  var hasCritical = /\b(however|although|on the other hand|in contrast|whereas|a limitation|counter-argument|arguably|it could be argued)\b/i.test(text);
-  var hasExamples = /\b(for example|for instance|such as|e\.g\.|specifically|namely|case in point)\b/i.test(text);
-  var hasTheory = /\b(theory|framework|model|according to|literature|research (shows|suggests|indicates))\b/i.test(text);
+  // ── Measure ─────────────────────────────────
+  var citations = countMatches(text, CITATION_RE);
+  var criticals = countMatches(text, CRITICAL_RE);
+  var examples = countMatches(text, EXAMPLE_RE);
+  var theory = countMatches(text, THEORY_RE);
+  var transitions = countMatches(text, TRANSITION_RE);
+  var dataPoints = countMatches(text, DATA_RE);
+  var vague = countMatches(text, VAGUE_RE);
+  var informal = countMatches(text, INFORMAL_RE);
+  var hasRefList = /\b(reference list|references|bibliography|works cited)\b/i.test(text.slice(-Math.min(text.length, 2500)));
 
+  var hasThesis = !!openPara && /\b(this (essay|assignment|report|paper|study|analysis)|the (aim|purpose|objective) of this|this (discussion|paper) (will|argues|examines)|argues that|will (examine|analyse|analyze|explore|evaluate|assess|discuss))\b/i.test(openPara);
+  var hasConclusion = /\b(in conclusion|to conclude|in summary|to summarise|to summarize|overall,|in closing|taken together)\b/i.test(text.slice(-Math.min(text.length, 1200)));
+
+  // Sentence-length spread: all-similar lengths read monotonously.
+  var lengths = sentences.map(function(s){ return s.split(/\s+/).length; });
+  var mean = lengths.reduce(function(a,b){ return a+b; }, 0) / (lengths.length || 1);
+  var variance = lengths.reduce(function(a,b){ return a + Math.pow(b - mean, 2); }, 0) / (lengths.length || 1);
+  var spread = Math.sqrt(variance);
+
+  var longest = sentences.slice().sort(function(a,b){ return b.split(/\s+/).length - a.split(/\s+/).length; })[0] || '';
+  var longestLen = longest ? longest.split(/\s+/).length : 0;
+
+  // A body paragraph carrying no citation, example or figure.
+  var unsupported = null;
+  for (var i = (pc > 2 ? 1 : 0); i < pc - (pc > 2 ? 1 : 0); i++) {
+    var p = paragraphs[i];
+    if (p.split(/\s+/).length < 45) continue;
+    if (!CITATION_RE.test(p) && !EXAMPLE_RE.test(p) && !DATA_RE.test(p)) { unsupported = p; break; }
+    CITATION_RE.lastIndex = EXAMPLE_RE.lastIndex = DATA_RE.lastIndex = 0;
+  }
+  var overlong = null;
+  for (var j = 0; j < pc; j++) {
+    if (paragraphs[j].split(/\s+/).length > 220) { overlong = j + 1; break; }
+  }
+  var repeat = topRepeatedWord(words);
+
+  // ── Score six dimensions, 0-1 each ──────────
+  var dims = [
+    { name: 'Structure & organisation', weight: 20, score: clamp01(
+        (pc >= 4 ? 0.4 : pc * 0.1) +
+        (hasThesis ? 0.2 : 0) + (hasConclusion ? 0.2 : 0) +
+        Math.min(per1000(transitions, wc) / 6, 1) * 0.2 - (overlong ? 0.1 : 0)) },
+    { name: 'Argument & thesis',        weight: 20, score: clamp01(
+        (hasThesis ? 0.45 : 0.05) + (hasConclusion ? 0.2 : 0) +
+        Math.min(per1000(criticals, wc) / 5, 1) * 0.2 +
+        (repeat.count > 0 && repeat.count / wc < 0.02 ? 0.15 : 0.05)) },
+    { name: 'Evidence & examples',      weight: 20, score: clamp01(
+        Math.min(per1000(examples, wc) / 4, 1) * 0.5 +
+        Math.min(per1000(dataPoints, wc) / 4, 1) * 0.3 +
+        (unsupported ? 0 : 0.2)) },
+    { name: 'Critical analysis',        weight: 20, score: clamp01(
+        Math.min(per1000(criticals, wc) / 6, 1) * 0.65 +
+        Math.min(per1000(theory, wc) / 5, 1) * 0.35) },
+    { name: 'Referencing',              weight: 10, score: clamp01(
+        Math.min(per1000(citations, wc) / 5, 1) * 0.7 + (hasRefList ? 0.3 : 0)) },
+    { name: 'Clarity & expression',     weight: 10, score: clamp01(
+        1 - Math.min(Math.max(avgSentLen - 26, 0) / 18, 0.35)
+          - Math.min(per1000(vague, wc) / 12, 0.3)
+          - Math.min(per1000(informal, wc) / 6, 0.2)
+          - (spread < 4 && sc > 8 ? 0.15 : 0)) }
+  ];
+
+  var score = 0, totalW = 0;
+  for (var d = 0; d < dims.length; d++) {
+    dims[d].points = Math.round(dims[d].score * dims[d].weight);
+    score += dims[d].points; totalW += dims[d].weight;
+  }
+  score = Math.round(score);
+  // A short piece cannot demonstrate sustained argument, however clean it is,
+  // so length caps the ceiling rather than being just one more bullet.
+  var lengthCap = wc < 250 ? 72 : (wc < 500 ? 84 : (wc < 800 ? 92 : 96));
+  var capped = score > lengthCap;
+  score = Math.max(15, Math.min(lengthCap, score));
+
+  // ── Improvements, weakest dimension first ───
   var issues = [];
+  if (wc < 300) issues.push('At ' + wc + ' words this is short for a full assignment. Check the brief — under-length usually means missing evidence and analysis, not missing filler.');
 
-  if (!hasIntro) {
-    issues.push('Your opening paragraph doesn\'t clearly state what the assignment will cover. Start with a sentence that names the topic and your position/approach, e.g. "This assignment examines... by analysing... and argues that..."' + (openPara ? ' Right now it opens with: "' + trimQuote(openPara, 110) + '"' : ''));
+  if (!hasThesis) {
+    issues.push('Your opening never states what you are arguing. Name the topic and your position in one sentence: "This assignment examines X and argues that Y."' +
+      (openPara ? ' It currently opens: "' + trimQuote(openPara, 120) + '"' : ''));
   }
-  if (!hasRef) {
-    issues.push('No in-text citations were detected (e.g. "(Author, Year)"). Every claim that isn\'t your own original observation needs a source — add citations in APA or Harvard format and a matching reference list at the end.');
-  } else {
-    issues.push('Citations are present — double-check every in-text citation has a matching entry in your reference list, and that the formatting (APA or Harvard) is consistent throughout.');
+  if (citations === 0) {
+    issues.push('No in-text citations found. Every claim that is not your own observation needs a source — (Author, Year) in the text, with a matching reference list.');
+  } else if (per1000(citations, wc) < 2.5) {
+    issues.push('Only ' + citations + ' citation' + (citations === 1 ? '' : 's') + ' across ' + wc + ' words — thin for academic work. Aim for a source behind each substantive claim.' + (hasRefList ? '' : ' No reference list was detected either.'));
   }
-  if (!hasCritical) {
-    issues.push('The writing reads as mostly descriptive. Add critical language — words like "however," "a limitation of this is," or "an alternative view is" — after your key claims to show evaluation, not just description.');
+  if (unsupported) {
+    issues.push('One body paragraph runs without a citation, example or figure anywhere in it — it reads as assertion. It begins: "' + trimQuote(unsupported, 110) + '"');
   }
-  if (!hasExamples) {
-    issues.push('Few concrete examples were found. Abstract claims are more convincing with a specific example, case, or data point attached to them — add at least one per major point.');
+  if (per1000(criticals, wc) < 3) {
+    issues.push('The writing is mostly descriptive — ' + criticals + ' evaluative marker' + (criticals === 1 ? '' : 's') + ' in ' + wc + ' words. After each main claim add a sentence that tests it: "However...", "A limitation of this is...", "An alternative reading is...".');
   }
-  if (!hasConc) {
-    issues.push('The submission doesn\'t clearly close with a conclusion. End with a paragraph that restates your main argument and directly answers the question that was asked — don\'t just stop after your last point.' + (closePara ? ' It currently ends with: "' + trimQuote(closePara, 110) + '"' : ''));
-  } else {
-    issues.push('A conclusion is present — make sure it synthesises your argument rather than just repeating your introduction word-for-word.');
+  if (examples === 0 && dataPoints === 0) {
+    issues.push('No concrete examples or figures. Attach a specific case, statistic or named instance to each major point — abstract claims read as opinion.');
+  } else if (per1000(examples, wc) < 2) {
+    issues.push('Examples are sparse (' + examples + ' in ' + wc + ' words). Follow the claim → example → what it proves pattern on your key points.');
   }
-  if (avgSentLen > 30) {
-    issues.push('Average sentence length is around ' + avgSentLen + ' words — several sentences may be running too long. Break dense sentences into two for clarity.');
+  if (theory === 0) {
+    issues.push('No course theory or named framework appears. Name the model, define it in a line, then apply it to your specific case — that application is what earns marks.');
   }
-  if (!hasTheory) {
-    issues.push('Ground your points more explicitly in course theory or established models — name the framework, define it briefly, then apply it to your specific topic.');
+  if (!hasConclusion) {
+    issues.push('There is no clear conclusion — the text stops rather than closing. End by restating your argument and answering the question directly.' + (closePara ? ' It currently ends: "' + trimQuote(closePara, 110) + '"' : ''));
+  }
+  if (longestLen > 45) {
+    issues.push('Your longest sentence runs ' + longestLen + ' words. Split it: "' + trimQuote(longest, 130) + '"');
+  } else if (avgSentLen > 28) {
+    issues.push('Sentences average ' + avgSentLen + ' words — dense. Breaking the longest ones in two is the fastest readability gain here.');
+  }
+  if (overlong) issues.push('Paragraph ' + overlong + ' is over 220 words. One idea per paragraph — split it where the second idea starts.');
+  if (repeat.word && repeat.count >= 6 && per1000(repeat.count, wc) > 8) {
+    issues.push('"' + repeat.word + '" appears ' + repeat.count + ' times. Either it is your core concept and needs defining once properly, or the argument is circling — vary it and push the point forward.');
+  }
+  if (per1000(vague, wc) > 8) issues.push('Vague qualifiers ("very", "a lot of", "things", "good") appear ' + vague + ' times. Replace each with the specific quantity, source or effect.');
+  if (informal > 0) issues.push('Informal phrasing appears ' + informal + ' time' + (informal === 1 ? '' : 's') + ' ("I think", "in my opinion", "obviously"). Academic writing asserts through evidence, not through stated belief.');
+  if (spread < 4 && sc > 8) issues.push('Sentence lengths barely vary (all near ' + avgSentLen + ' words), which reads flat. Mix short declarative sentences with longer analytical ones.');
+
+  // ── Strengths, so the report is not all deficit ──
+  var good = [];
+  if (hasThesis) good.push('The introduction states a clear position rather than just naming the topic.');
+  if (per1000(citations, wc) >= 2.5) good.push(citations + ' citations across ' + wc + ' words — claims are sourced at a reasonable density.');
+  if (per1000(criticals, wc) >= 3) good.push('Evaluative language (' + criticals + ' markers) shows you are testing claims, not only reporting them.');
+  if (per1000(examples, wc) >= 2 || dataPoints >= 3) good.push('Concrete examples and figures are doing real work in the argument.');
+  if (hasConclusion) good.push('The submission closes properly instead of stopping mid-point.');
+  if (theory >= 3) good.push('Course theory and frameworks are named and applied.');
+  if (pc >= 5 && !overlong) good.push('Paragraphing is well controlled — ' + pc + ' paragraphs, none overlong.');
+  if (avgSentLen <= 24 && spread >= 5) good.push('Sentence rhythm is varied and readable.');
+
+  // ── Assemble ────────────────────────────────
+  var out = 'What I read\n';
+  out += wc + ' words · ' + sc + ' sentences · ' + pc + ' paragraphs · ' + avgSentLen + ' words per sentence · ' + citations + ' citations\n\n';
+
+  out += 'Areas for Improvement\n';
+  out += issues.length
+    ? '• ' + issues.slice(0, 6).join('\n• ')
+    : '• No structural weaknesses stood out. Focus your next pass on sharpening the argument itself rather than the mechanics.';
+
+  if (good.length) out += '\n\nWhat is working\n• ' + good.slice(0, 4).join('\n• ');
+
+  out += '\n\nScore breakdown';
+  for (var k = 0; k < dims.length; k++) {
+    var label = dims[k].name;
+    while (label.length < 26) label += ' ';
+    out += '\n' + label + dims[k].points + '/' + dims[k].weight;
   }
 
-  var wcNote = wc < 300 ? 'This looks short for a full assignment (' + wc + ' words) — check the word count requirement.' : null;
-  if (wcNote) issues.unshift(wcNote);
+  var weakest = dims.slice().sort(function(a, b){ return (a.points / a.weight) - (b.points / b.weight); })[0];
+  var weak = weakest.name.charAt(0).toLowerCase() + weakest.name.slice(1);
+  var verdict = score >= 80
+    ? 'Strong work — ' + weak + ' is the one area still holding it back.'
+    : score >= 65
+      ? 'A solid foundation. The biggest single gain available is in ' + weak + '.'
+      : score >= 45
+        ? 'The argument is there but under-supported. Fix ' + weak + ' first — it is costing the most marks.'
+        : 'This needs substantial work before submission, starting with ' + weak + '.';
+  if (capped) {
+    verdict += ' The writing scores higher than this, but at ' + wc + ' words there is not enough of it to demonstrate sustained argument — length is the ceiling here.';
+  }
 
-  var score = 58;
-  if (wc > 600) score += 4; if (wc > 1200) score += 4;
-  if (hasRef) score += 8; if (hasConc) score += 5; if (hasIntro) score += 4;
-  if (hasCritical) score += 8; if (hasExamples) score += 6; if (hasTheory) score += 5;
-  score = Math.min(score, 89);
-
-  var just = score >= 80 ? 'Well-structured with clear argumentation. The remaining points above are refinements, not rewrites.'
-    : score >= 68 ? 'Solid foundation — the points listed above are the main things holding the grade back.'
-    : 'The structural and evidentiary gaps listed above need to be addressed before this is submission-ready.';
-
-  var out = 'Areas for Improvement (based on your actual submission)\n• ' + issues.slice(0, 5).join('\n• ');
-  out += '\n\nEstimated Grade\n' + score + '/100 — ' + just;
+  out += '\n\nEstimated Grade\n' + score + '/100 — ' + verdict;
+  out += '\n\n(Estimated from structure, argument, evidence, analysis, referencing and clarity — not from your course rubric. Treat it as a guide.)';
   return out;
 }
 
