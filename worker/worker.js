@@ -74,9 +74,9 @@ const PORTFOLIO_SYSTEM = [
 ].join('\n');
 
 const MODES = {
-  feedback: { system: FEEDBACK_SYSTEM, maxTokens: 1200 },
-  feedback_qa: { system: FEEDBACK_QA_SYSTEM, maxTokens: 700 },
-  portfolio: { system: PORTFOLIO_SYSTEM, maxTokens: 700 },
+  feedback: { system: FEEDBACK_SYSTEM, maxTokens: 4000 },
+  feedback_qa: { system: FEEDBACK_QA_SYSTEM, maxTokens: 2000 },
+  portfolio: { system: PORTFOLIO_SYSTEM, maxTokens: 2000 },
 };
 
 function corsHeaders(origin) {
@@ -97,6 +97,66 @@ function json(body, status, origin) {
   });
 }
 
+// Thinking shares the max_tokens budget with the reply on this model, so a
+// small budget can be consumed entirely by reasoning and return empty text.
+// These are short, well-specified tasks, so thinking is turned off and the
+// whole budget goes to the answer. (Permitted at effort `high` or below.)
+function callAnthropic(apiKey, mode, messages) {
+  const config = MODES[mode];
+  return fetch(ANTHROPIC_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: config.maxTokens,
+      thinking: { type: 'disabled' },
+      output_config: { effort: 'medium' },
+      system: config.system,
+      messages: messages,
+    }),
+  });
+}
+
+// Plain-English health check: open the Worker URL with ?selftest=1 in a
+// browser and it reports whether the key actually works, in one click.
+async function selfTest(env, origin) {
+  if (!env.ANTHROPIC_API_KEY) {
+    return json({ ok: false, step: 'api key', detail:
+      'No ANTHROPIC_API_KEY secret is set on this Worker. Add it under Settings > Variables and Secrets, named exactly ANTHROPIC_API_KEY.' }, 200, origin);
+  }
+  let res;
+  try {
+    res = await callAnthropic(env.ANTHROPIC_API_KEY, 'portfolio',
+      [{ role: 'user', content: 'Reply with the single word OK.' }]);
+  } catch (e) {
+    return json({ ok: false, step: 'network', detail: 'Worker could not reach api.anthropic.com: ' + e.message }, 200, origin);
+  }
+  const raw = await res.text();
+  if (!res.ok) {
+    let detail = raw;
+    try { const p = JSON.parse(raw); detail = (p.error && (p.error.message || p.error.type)) || raw; } catch (e) {}
+    return json({ ok: false, step: 'anthropic', http: res.status, detail: detail }, 200, origin);
+  }
+  let data;
+  try { data = JSON.parse(raw); } catch (e) {
+    return json({ ok: false, step: 'parse', detail: raw.slice(0, 400) }, 200, origin);
+  }
+  const text = (data.content || []).filter(function (b) { return b.type === 'text'; })
+    .map(function (b) { return b.text; }).join('').trim();
+  return json({
+    ok: !!text,
+    step: text ? 'done' : 'empty reply',
+    model: data.model,
+    stop_reason: data.stop_reason,
+    reply: text,
+    usage: data.usage,
+  }, 200, origin);
+}
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
@@ -104,8 +164,11 @@ export default {
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders(origin) });
     }
+    if (new URL(request.url).searchParams.has('selftest')) {
+      return selfTest(env, origin);
+    }
     if (request.method !== 'POST') {
-      return json({ error: 'Use POST.' }, 405, origin);
+      return json({ error: 'Use POST. Add ?selftest=1 to this URL to check whether the API key works.' }, 405, origin);
     }
     if (origin && !ALLOWED_ORIGINS.includes(origin)) {
       return json({ error: 'Origin not allowed.' }, 403, origin);
@@ -144,37 +207,28 @@ export default {
 
     let upstream;
     try {
-      upstream = await fetch(ANTHROPIC_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': env.ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          max_tokens: config.maxTokens,
-          // Thinking is on by default on this model and shares the max_tokens
-          // budget with the reply, so effort is kept low to keep responses
-          // fast and leave room for the answer itself.
-          output_config: { effort: 'low' },
-          system: config.system,
-          messages: messages,
-        }),
-      });
+      upstream = await callAnthropic(env.ANTHROPIC_API_KEY, mode, messages);
     } catch (e) {
-      return json({ error: 'Could not reach the AI service.' }, 502, origin);
+      return json({ error: 'Worker could not reach the AI service.' }, 502, origin);
     }
 
     if (!upstream.ok) {
-      const detail = await upstream.text();
-      console.log('Anthropic API error', upstream.status, detail);
-      // Don't leak upstream error bodies to the browser — they can contain
-      // account and request metadata.
-      const msg = upstream.status === 429
-        ? 'The AI service is busy right now. Please try again in a moment.'
-        : 'The AI service returned an error.';
-      return json({ error: msg }, upstream.status === 429 ? 429 : 502, origin);
+      const raw = await upstream.text();
+      console.log('Anthropic API error', upstream.status, raw);
+      if (upstream.status === 429) {
+        return json({ error: 'The AI service is busy right now. Please try again in a moment.' }, 429, origin);
+      }
+      // Forward Anthropic's own reason. It names the actual problem (expired
+      // key, credit balance, bad request) instead of a generic failure that
+      // takes several rounds of guessing to diagnose.
+      let reason = 'HTTP ' + upstream.status;
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed.error && (parsed.error.message || parsed.error.type)) {
+          reason = parsed.error.message || parsed.error.type;
+        }
+      } catch (e) {}
+      return json({ error: reason }, 502, origin);
     }
 
     const data = await upstream.json();
