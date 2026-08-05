@@ -21,17 +21,67 @@
 const MODEL = 'claude-opus-5';
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 
-// Default Gemini model. Override without touching code by adding a plain
-// variable (not a secret) named GEMINI_MODEL in the Worker's settings —
-// e.g. gemini-2.5-pro for higher quality at a lower free-tier daily cap.
-const GEMINI_MODEL_DEFAULT = 'gemini-2.5-flash';
+// Gemini model names come and go — a hardcoded one eventually 404s with
+// "no longer available to new users". So the model is discovered from the
+// account's own model list and cached, instead of being guessed here.
+// Set a plain GEMINI_MODEL variable in the Worker's settings to pin one.
+const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
-function geminiModel(env) {
-  return (env && env.GEMINI_MODEL) ? env.GEMINI_MODEL : GEMINI_MODEL_DEFAULT;
+// Fallbacks used only if the model list itself cannot be fetched.
+const GEMINI_FALLBACKS = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-pro-latest'];
+
+let resolvedGeminiModel = null; // cached for the life of the Worker instance
+
+function listGeminiModels(env) {
+  return fetch(GEMINI_API_BASE + '/models?pageSize=200&key=' +
+    encodeURIComponent(env.GEMINI_API_KEY));
 }
-function geminiUrl(env) {
-  return 'https://generativelanguage.googleapis.com/v1beta/models/' +
-    geminiModel(env) + ':generateContent';
+
+// Prefers the newest "flash" generation: fast, cheap, and the highest free
+// daily quota. Falls back to pro-class models if no flash is offered.
+function rankGeminiModel(name) {
+  if (/embedding|aqa|imagen|veo|tts|image|audio|native|thinking-exp/.test(name)) return -1000;
+  let score = 0;
+  const version = name.match(/gemini-(\d+)(?:\.(\d+))?/);
+  if (version) score += parseInt(version[1], 10) * 30 + (parseInt(version[2], 10) || 0) * 3;
+  if (/latest/.test(name)) score += 25;       // stable alias, survives renames
+  if (/flash/.test(name)) score += 60;        // best free-tier daily quota
+  else if (/pro/.test(name)) score += 20;
+  if (/lite/.test(name)) score -= 15;         // cheaper, weaker on grading
+  // Previews carry lower quotas and are withdrawn without notice, so they
+  // rank below any stable model but stay usable if nothing else is offered.
+  if (/preview|exp/.test(name)) score -= 250;
+  return score;
+}
+
+async function resolveGeminiModel(env) {
+  if (env.GEMINI_MODEL) return env.GEMINI_MODEL;
+  if (resolvedGeminiModel) return resolvedGeminiModel;
+
+  try {
+    const res = await listGeminiModels(env);
+    if (res.ok) {
+      const data = await res.json();
+      const usable = (data.models || [])
+        .filter(function (m) {
+          return (m.supportedGenerationMethods || []).indexOf('generateContent') !== -1;
+        })
+        .map(function (m) { return String(m.name).replace(/^models\//, ''); })
+        .filter(function (n) { return rankGeminiModel(n) > -1000; })
+        .sort(function (a, b) { return rankGeminiModel(b) - rankGeminiModel(a); });
+      if (usable.length) {
+        resolvedGeminiModel = usable[0];
+        return resolvedGeminiModel;
+      }
+    }
+  } catch (e) { /* fall through to the static list */ }
+
+  resolvedGeminiModel = GEMINI_FALLBACKS[0];
+  return resolvedGeminiModel;
+}
+
+function geminiUrl(model) {
+  return GEMINI_API_BASE + '/models/' + model + ':generateContent';
 }
 
 function providerOf(env) {
@@ -126,29 +176,53 @@ function json(body, status, origin) {
 // Gemini's shape differs from Anthropic's: the system prompt is its own
 // field, roles are user/model rather than user/assistant, and the text sits
 // under parts[].
-function callGemini(env, mode, messages) {
+function geminiBody(mode, messages) {
   const config = MODES[mode];
-  return fetch(geminiUrl(env) + '?key=' + encodeURIComponent(env.GEMINI_API_KEY), {
+  return {
+    systemInstruction: { parts: [{ text: config.system }] },
+    contents: messages.map(function (m) {
+      return {
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: m.content }],
+      };
+    }),
+    generationConfig: {
+      maxOutputTokens: config.maxTokens,
+      temperature: 0.3,
+      // Flash reasons before answering and that shares the output budget,
+      // exactly like the Anthropic path. Turn it off so the whole budget
+      // goes to the reply.
+      thinkingConfig: { thinkingBudget: 0 },
+    },
+  };
+}
+
+async function postGemini(env, model, mode, messages) {
+  return fetch(geminiUrl(model) + '?key=' + encodeURIComponent(env.GEMINI_API_KEY), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: config.system }] },
-      contents: messages.map(function (m) {
-        return {
-          role: m.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: m.content }],
-        };
-      }),
-      generationConfig: {
-        maxOutputTokens: config.maxTokens,
-        temperature: 0.3,
-        // Flash reasons before answering and that shares the output budget,
-        // exactly like the Anthropic path. Turn it off so the whole budget
-        // goes to the reply.
-        thinkingConfig: { thinkingBudget: 0 },
-      },
-    }),
+    body: JSON.stringify(geminiBody(mode, messages)),
   });
+}
+
+// A retired model answers 404. Rather than fail, drop the cached choice and
+// work through the fallbacks so the app keeps running when Google renames
+// something.
+async function callGemini(env, mode, messages) {
+  const first = await resolveGeminiModel(env);
+  let res = await postGemini(env, first, mode, messages);
+  if (res.status !== 404 || env.GEMINI_MODEL) return res;
+
+  resolvedGeminiModel = null;
+  for (const candidate of GEMINI_FALLBACKS) {
+    if (candidate === first) continue;
+    res = await postGemini(env, candidate, mode, messages);
+    if (res.status !== 404) {
+      resolvedGeminiModel = candidate;
+      return res;
+    }
+  }
+  return res;
 }
 
 function extractGeminiText(data) {
@@ -214,7 +288,7 @@ async function selfTest(env, origin) {
   return json({
     ok: !!text,
     provider: provider,
-    model: provider === 'gemini' ? geminiModel(env) : MODEL,
+    model: provider === 'gemini' ? (resolvedGeminiModel || env.GEMINI_MODEL) : MODEL,
     step: text ? 'done' : 'empty reply',
     reply: text,
   }, 200, origin);
@@ -249,7 +323,20 @@ export default {
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders(origin) });
     }
-    if (new URL(request.url).searchParams.has('selftest')) {
+    const query = new URL(request.url).searchParams;
+    if (query.has('models')) {
+      if (providerOf(env) !== 'gemini') {
+        return json({ error: 'No GEMINI_API_KEY is set on this Worker.' }, 400, origin);
+      }
+      const res = await listGeminiModels(env);
+      const raw = await res.text();
+      if (!res.ok) return json({ ok: false, detail: errorReason(raw, res.status) }, 200, origin);
+      const models = (JSON.parse(raw).models || [])
+        .filter(function (m) { return (m.supportedGenerationMethods || []).indexOf('generateContent') !== -1; })
+        .map(function (m) { return String(m.name).replace(/^models\//, ''); });
+      return json({ chosen: await resolveGeminiModel(env), available: models.sort() }, 200, origin);
+    }
+    if (query.has('selftest')) {
       return selfTest(env, origin);
     }
     if (request.method !== 'POST') {
