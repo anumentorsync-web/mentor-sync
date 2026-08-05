@@ -1679,34 +1679,14 @@ function analyseText(rawText) {
   if (informal > 0) issues.push('Informal phrasing appears ' + informal + ' time' + (informal === 1 ? '' : 's') + ' ("I think", "in my opinion", "obviously"). Academic writing asserts through evidence, not through stated belief.');
   if (spread < 4 && sc > 8) issues.push('Sentence lengths barely vary (all near ' + avgSentLen + ' words), which reads flat. Mix short declarative sentences with longer analytical ones.');
 
-  // ── Strengths, so the report is not all deficit ──
-  var good = [];
-  if (hasThesis) good.push('The introduction states a clear position rather than just naming the topic.');
-  if (per1000(citations, wc) >= 2.5) good.push(citations + ' citations across ' + wc + ' words — claims are sourced at a reasonable density.');
-  if (per1000(criticals, wc) >= 3) good.push('Evaluative language (' + criticals + ' markers) shows you are testing claims, not only reporting them.');
-  if (per1000(examples, wc) >= 2 || dataPoints >= 3) good.push('Concrete examples and figures are doing real work in the argument.');
-  if (hasConclusion) good.push('The submission closes properly instead of stopping mid-point.');
-  if (theory >= 3) good.push('Course theory and frameworks are named and applied.');
-  if (pc >= 5 && !overlong) good.push('Paragraphing is well controlled — ' + pc + ' paragraphs, none overlong.');
-  if (avgSentLen <= 24 && spread >= 5) good.push('Sentence rhythm is varied and readable.');
-
   // ── Assemble ────────────────────────────────
-  var out = 'What I read\n';
-  out += wc + ' words · ' + sc + ' sentences · ' + pc + ' paragraphs · ' + avgSentLen + ' words per sentence · ' + citations + ' citations\n\n';
-
-  out += 'Areas for Improvement\n';
+  // Deliberately just the fixes and the grade. Word counts, per-dimension
+  // scores and a strengths list read as a report card rather than advice,
+  // and they pushed the actionable part out of view.
+  var out = 'Areas for Improvement\n';
   out += issues.length
     ? '• ' + issues.slice(0, 6).join('\n• ')
     : '• No structural weaknesses stood out. Focus your next pass on sharpening the argument itself rather than the mechanics.';
-
-  if (good.length) out += '\n\nWhat is working\n• ' + good.slice(0, 4).join('\n• ');
-
-  out += '\n\nScore breakdown';
-  for (var k = 0; k < dims.length; k++) {
-    var label = dims[k].name;
-    while (label.length < 26) label += ' ';
-    out += '\n' + label + dims[k].points + '/' + dims[k].weight;
-  }
 
   var weakest = dims.slice().sort(function(a, b){ return (a.points / a.weight) - (b.points / b.weight); })[0];
   var weak = weakest.name.charAt(0).toLowerCase() + weakest.name.slice(1);
@@ -1718,11 +1698,10 @@ function analyseText(rawText) {
         ? 'The argument is there but under-supported. Fix ' + weak + ' first — it is costing the most marks.'
         : 'This needs substantial work before submission, starting with ' + weak + '.';
   if (capped) {
-    verdict += ' The writing scores higher than this, but at ' + wc + ' words there is not enough of it to demonstrate sustained argument — length is the ceiling here.';
+    verdict += ' At ' + wc + ' words there is also not enough of it to demonstrate sustained argument.';
   }
 
   out += '\n\nEstimated Grade\n' + score + '/100 — ' + verdict;
-  out += '\n\n(Estimated from structure, argument, evidence, analysis, referencing and clarity — not from your course rubric. Treat it as a guide.)';
   return out;
 }
 
@@ -1934,7 +1913,10 @@ function doDownload() {
 // engine below; fill it in to get live AI answers.
 var MS_AI_ENDPOINT = 'https://mentorsync-ai.anushaateduclass.workers.dev';
 
+// Long submissions take far longer than a chat reply. A single ceiling was
+// aborting document feedback before the model finished.
 var AI_TIMEOUT_MS = 45000;
+var AI_TIMEOUT_LONG_MS = 120000;
 
 // Tolerates the URL being pasted without a scheme or with a trailing slash —
 // both are easy to do and used to silently disable live AI with no visible
@@ -1967,8 +1949,9 @@ function msAiTest() {
 function askAI(mode, messages) {
   if (!aiConfigured()) return Promise.reject(new Error('AI endpoint not configured'));
 
+  var limit = mode === 'feedback' ? AI_TIMEOUT_LONG_MS : AI_TIMEOUT_MS;
   var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-  var timer = setTimeout(function() { if (controller) controller.abort(); }, AI_TIMEOUT_MS);
+  var timer = setTimeout(function() { if (controller) controller.abort(); }, limit);
 
   return fetch(aiEndpoint(), {
     method: 'POST',
@@ -1986,7 +1969,7 @@ function askAI(mode, messages) {
     return r.data.text;
   }).catch(function(err) {
     var msg = err && err.message ? err.message : String(err);
-    if (err && err.name === 'AbortError') msg = 'Timed out after ' + (AI_TIMEOUT_MS / 1000) + 's';
+    if (err && err.name === 'AbortError') msg = 'Timed out after ' + (limit / 1000) + 's';
     else if (msg === 'Failed to fetch') msg = 'Could not reach the Worker (blocked by CORS, offline, or wrong URL)';
     lastAiError = msg;
     throw new Error(msg);

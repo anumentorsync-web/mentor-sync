@@ -29,7 +29,7 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
 // Bumped whenever this file changes. Reported by ?selftest=1 so a stale
 // deploy is visible instead of being mistaken for a broken key.
-const WORKER_VERSION = '2026-08-04-f';
+const WORKER_VERSION = '2026-08-04-g';
 
 // Fallbacks used only if the model list itself cannot be fetched.
 const GEMINI_FALLBACKS = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-pro-latest'];
@@ -197,25 +197,32 @@ function geminiBody(mode, messages, variant) {
   };
 
   if (variant === 0) {
-    // Reasoning off, whole budget to the reply. Accepted by 2.x.
+    // 2.x: reasoning off, whole budget to the reply.
     body.generationConfig = {
       maxOutputTokens: config.maxTokens,
       temperature: 0.3,
       thinkingConfig: { thinkingBudget: 0 },
     };
   } else if (variant === 1) {
-    // No thinking control. Reasoning may be on and shares the output budget,
-    // so the budget is doubled to leave room for an actual answer.
+    // 3.x: thinkingBudget is rejected; thinkingLevel is the equivalent knob.
     body.generationConfig = {
       maxOutputTokens: config.maxTokens * 2,
       temperature: 0.3,
+      thinkingConfig: { thinkingLevel: 'low' },
+    };
+  } else if (variant === 2) {
+    // No thinking control at all. Reasoning shares the output budget, so it
+    // is tripled to leave room for an actual answer on long submissions.
+    body.generationConfig = {
+      maxOutputTokens: config.maxTokens * 3,
+      temperature: 0.3,
     };
   }
-  // variant 2: no generationConfig at all — provider defaults.
+  // variant 3: no generationConfig — provider defaults.
   return body;
 }
 
-const GEMINI_VARIANTS = 3;
+const GEMINI_VARIANTS = 4;
 
 async function postGemini(env, model, mode, messages, variant) {
   return fetch(geminiUrl(model) + '?key=' + encodeURIComponent(env.GEMINI_API_KEY), {
@@ -229,23 +236,40 @@ async function postGemini(env, model, mode, messages, variant) {
 // walked once rather than on every request.
 let geminiVariant = 0;
 
+// A 200 carrying no text is as useless as a 400 — most often the model spent
+// the entire output budget on reasoning. Both are treated as "try the next
+// body shape", so the ladder recovers from either.
+async function readGeminiAttempt(res) {
+  const raw = await res.text();
+  let data = null;
+  try { data = JSON.parse(raw); } catch (e) {}
+  const text = data ? extractGeminiText(data) : '';
+  const finish = data && data.candidates && data.candidates[0]
+    ? data.candidates[0].finishReason : null;
+  return { res: res, raw: raw, data: data, text: text, finish: finish,
+           usable: res.ok && !!text };
+}
+
 async function postGeminiAdaptive(env, model, mode, messages) {
-  let res = await postGemini(env, model, mode, messages, geminiVariant);
-  if (res.status !== 400) return res;
+  let attempt = await readGeminiAttempt(
+    await postGemini(env, model, mode, messages, geminiVariant));
+  if (attempt.usable || attempt.res.status === 404) return attempt;
 
   for (let v = 0; v < GEMINI_VARIANTS; v++) {
     if (v === geminiVariant) continue;
-    const attempt = await postGemini(env, model, mode, messages, v);
-    if (attempt.status !== 400) { geminiVariant = v; return attempt; }
-    res = attempt;
+    const next = await readGeminiAttempt(
+      await postGemini(env, model, mode, messages, v));
+    if (next.res.status === 404) return next;
+    if (next.usable) { geminiVariant = v; return next; }
+    attempt = next;
   }
-  return res; // every shape rejected — return the last so the reason surfaces
+  return attempt; // nothing worked — return the last so its reason surfaces
 }
 
 async function callGemini(env, mode, messages) {
   const first = await resolveGeminiModel(env);
   let res = await postGeminiAdaptive(env, first, mode, messages);
-  if (res.status !== 404) { resolvedGeminiModel = first; return res; }
+  if (res.res.status !== 404) { resolvedGeminiModel = first; return res; }
 
   // 404 means the model is gone. A pinned GEMINI_MODEL is treated as a
   // preference, not a contract, so a retired pin cannot take the app down.
@@ -258,7 +282,7 @@ async function callGemini(env, mode, messages) {
     if (tried.indexOf(candidate) !== -1) continue;
     tried.push(candidate);
     res = await postGeminiAdaptive(env, candidate, mode, messages);
-    if (res.status !== 404) {
+    if (res.res.status !== 404) {
       resolvedGeminiModel = candidate;
       return res;
     }
@@ -303,51 +327,71 @@ async function selfTest(env, origin) {
     return json({ ok: false, version: WORKER_VERSION, step: 'api key', detail:
       'No API key secret is set on this Worker. Add one under Settings > Variables and Secrets, named exactly GEMINI_API_KEY (free tier) or ANTHROPIC_API_KEY (paid).' }, 200, origin);
   }
-  let res;
+  let out;
   try {
-    res = await callModel(env, 'portfolio',
+    out = await runModel(env, 'portfolio',
       [{ role: 'user', content: 'Reply with the single word OK.' }]);
   } catch (e) {
-    return json({ ok: false, version: WORKER_VERSION, provider: provider, step: 'network', detail: 'Worker could not reach the model provider: ' + e.message }, 200, origin);
+    return json({ ok: false, version: WORKER_VERSION, provider: provider, step: 'network',
+      detail: 'Worker could not reach the model provider: ' + e.message }, 200, origin);
   }
-  const raw = await res.text();
-  if (!res.ok) {
-    const body = { ok: false, version: WORKER_VERSION, provider: provider,
-      model: resolvedGeminiModel || env.GEMINI_MODEL || null,
-      pinned: env.GEMINI_MODEL || null,
-      step: 'provider rejected the request',
-      http: res.status, detail: errorReason(raw, res.status) };
-    // Only offered once the provider has actually refused, and only as a
-    // hint: key formats change, so this is not treated as a validity rule.
-    // Only suggest a key problem when the error actually looks like one —
-    // a 400 about request arguments is not a credentials issue.
-    if (provider === 'gemini' &&
-        (res.status === 401 || res.status === 403 || /API key|credential|permission/i.test(body.detail))) {
-      body.hint = 'Check the key came from https://aistudio.google.com/apikey (Get API key) rather than from Google Cloud credentials, and that the Generative Language API is enabled for its project.';
-    }
-    return json(body, 200, origin);
-  }
-  let data;
-  try { data = JSON.parse(raw); } catch (e) {
-    return json({ ok: false, provider: provider, step: 'parse', detail: raw.slice(0, 400) }, 200, origin);
-  }
-  const text = extractText(provider, data);
-  return json({
-    ok: !!text,
+
+  const base = {
     version: WORKER_VERSION,
     provider: provider,
     model: provider === 'gemini' ? (resolvedGeminiModel || env.GEMINI_MODEL) : MODEL,
     pinned: env.GEMINI_MODEL || null,
-    bodyVariant: geminiVariant,
-    step: text ? 'done' : 'empty reply',
-    reply: text,
-  }, 200, origin);
+    bodyVariant: provider === 'gemini' ? geminiVariant : null,
+  };
+
+  if (!out.ok) {
+    const body = Object.assign({ ok: false }, base, {
+      step: 'provider rejected the request',
+      http: out.status,
+      finishReason: out.finish || null,
+      detail: out.error,
+    });
+    // Only suggest a key problem when the error actually looks like one —
+    // a 400 about request arguments is not a credentials issue.
+    if (provider === 'gemini' &&
+        (out.status === 401 || out.status === 403 || /API key|credential|permission/i.test(out.error || ''))) {
+      body.hint = 'Check the key came from https://aistudio.google.com/apikey (Get API key) rather than from Google Cloud credentials, and that the Generative Language API is enabled for its project.';
+    }
+    return json(body, 200, origin);
+  }
+
+  return json(Object.assign({ ok: true }, base, { step: 'done', reply: out.text }), 200, origin);
 }
 
-function callModel(env, mode, messages) {
-  return providerOf(env) === 'gemini'
-    ? callGemini(env, mode, messages)
-    : callAnthropic(env.ANTHROPIC_API_KEY, mode, messages);
+// Single entry point for both providers. Always resolves to the same shape:
+// { ok, text } on success, or { ok:false, status, error, finish } on failure.
+async function runModel(env, mode, messages) {
+  if (providerOf(env) === 'gemini') {
+    const a = await callGemini(env, mode, messages);
+    if (a.usable) return { ok: true, text: a.text };
+    return {
+      ok: false,
+      status: a.res.status,
+      finish: a.finish,
+      error: a.res.ok
+        ? ('Model returned no text' + (a.finish ? ' (finishReason: ' + a.finish + ')' : '') + '.')
+        : errorReason(a.raw, a.res.status),
+    };
+  }
+
+  const res = await callAnthropic(env.ANTHROPIC_API_KEY, mode, messages);
+  const raw = await res.text();
+  if (!res.ok) return { ok: false, status: res.status, error: errorReason(raw, res.status) };
+  let data;
+  try { data = JSON.parse(raw); } catch (e) {
+    return { ok: false, status: 502, error: 'Response was not JSON' };
+  }
+  if (data.stop_reason === 'refusal') {
+    return { ok: false, status: 200, error: 'The AI declined to answer that request.' };
+  }
+  const text = extractText('anthropic', data);
+  if (!text) return { ok: false, status: 502, error: 'Model returned no text.' };
+  return { ok: true, text: text };
 }
 
 function extractText(provider, data) {
@@ -428,35 +472,24 @@ export default {
     }
 
     const provider = providerOf(env);
-    let upstream;
+    let out;
     try {
-      upstream = await callModel(env, mode, messages);
+      out = await runModel(env, mode, messages);
     } catch (e) {
       return json({ error: 'Worker could not reach the AI service.' }, 502, origin);
     }
 
-    if (!upstream.ok) {
-      const raw = await upstream.text();
-      console.log(provider + ' API error', upstream.status, raw);
-      if (upstream.status === 429) {
+    if (!out.ok) {
+      console.log(provider + ' failed', out.status, out.error, out.finish || '');
+      if (out.status === 429) {
         return json({ error: 'The AI service is busy or the daily free quota is used up. Please try again later.' }, 429, origin);
       }
       // Forward the provider's own reason rather than a generic failure —
       // it names the actual problem and saves rounds of guessing.
-      return json({ error: errorReason(raw, upstream.status) }, 502, origin);
+      return json({ error: out.error }, 502, origin);
     }
 
-    const data = await upstream.json();
-
-    if (data.stop_reason === 'refusal') {
-      return json({ error: 'The AI declined to answer that request.' }, 200, origin);
-    }
-
-    const text = extractText(provider, data);
-
-    if (!text) {
-      return json({ error: 'The AI returned an empty response.' }, 502, origin);
-    }
+    const text = out.text;
     return json({ text: text }, 200, origin);
   },
 };
