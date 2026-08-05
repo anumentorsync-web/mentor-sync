@@ -1769,13 +1769,22 @@ function doDownload() {
 // that Worker, never in this page — anything shipped to the browser is public.
 // Leave this empty and every feature still works using the built-in offline
 // engine below; fill it in to get live AI answers.
-var MS_AI_ENDPOINT = 'mentorsync-ai.anushaateduclass.workers.dev';
+var MS_AI_ENDPOINT = 'https://mentorsync-ai.anushaateduclass.workers.dev';
 
 var AI_TIMEOUT_MS = 45000;
 
-function aiConfigured() {
-  return typeof MS_AI_ENDPOINT === 'string' && MS_AI_ENDPOINT.indexOf('http') === 0;
+// Tolerates the URL being pasted without a scheme or with a trailing slash —
+// both are easy to do and used to silently disable live AI with no visible
+// symptom other than generic answers.
+function aiEndpoint() {
+  if (typeof MS_AI_ENDPOINT !== 'string') return '';
+  var url = MS_AI_ENDPOINT.trim().replace(/\/+$/, '');
+  if (!url) return '';
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  return url;
 }
+
+function aiConfigured() { return aiEndpoint() !== ''; }
 
 // Calls the proxy. Rejects on any failure so every caller can fall back to the
 // offline engine — a backend outage degrades the feature, it never breaks it.
@@ -1785,7 +1794,7 @@ function askAI(mode, messages) {
   var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
   var timer = setTimeout(function() { if (controller) controller.abort(); }, AI_TIMEOUT_MS);
 
-  return fetch(MS_AI_ENDPOINT, {
+  return fetch(aiEndpoint(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ mode: mode, messages: messages }),
