@@ -15,8 +15,21 @@
  * can't edit them in DevTools to change how their work is graded.
  */
 
+// Two providers are supported. Whichever key is present in the Worker's
+// secrets is used — GEMINI_API_KEY first, since its free tier means it needs
+// no billing. Set only one; set both and Gemini wins.
 const MODEL = 'claude-opus-5';
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
+
+const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/' +
+  GEMINI_MODEL + ':generateContent';
+
+function providerOf(env) {
+  if (env.GEMINI_API_KEY) return 'gemini';
+  if (env.ANTHROPIC_API_KEY) return 'anthropic';
+  return null;
+}
 
 // Origins allowed to call this Worker. Add your GitHub Pages origin and any
 // local dev origin you use. Requests from anywhere else are refused, so the
@@ -101,6 +114,43 @@ function json(body, status, origin) {
 // small budget can be consumed entirely by reasoning and return empty text.
 // These are short, well-specified tasks, so thinking is turned off and the
 // whole budget goes to the answer. (Permitted at effort `high` or below.)
+// Gemini's shape differs from Anthropic's: the system prompt is its own
+// field, roles are user/model rather than user/assistant, and the text sits
+// under parts[].
+function callGemini(apiKey, mode, messages) {
+  const config = MODES[mode];
+  return fetch(GEMINI_URL + '?key=' + encodeURIComponent(apiKey), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: config.system }] },
+      contents: messages.map(function (m) {
+        return {
+          role: m.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: m.content }],
+        };
+      }),
+      generationConfig: {
+        maxOutputTokens: config.maxTokens,
+        temperature: 0.3,
+        // Flash reasons before answering and that shares the output budget,
+        // exactly like the Anthropic path. Turn it off so the whole budget
+        // goes to the reply.
+        thinkingConfig: { thinkingBudget: 0 },
+      },
+    }),
+  });
+}
+
+function extractGeminiText(data) {
+  const cand = (data.candidates || [])[0];
+  if (!cand) return '';
+  return ((cand.content && cand.content.parts) || [])
+    .map(function (p) { return p.text || ''; })
+    .join('')
+    .trim();
+}
+
 function callAnthropic(apiKey, mode, messages) {
   const config = MODES[mode];
   return fetch(ANTHROPIC_URL, {
@@ -124,37 +174,57 @@ function callAnthropic(apiKey, mode, messages) {
 // Plain-English health check: open the Worker URL with ?selftest=1 in a
 // browser and it reports whether the key actually works, in one click.
 async function selfTest(env, origin) {
-  if (!env.ANTHROPIC_API_KEY) {
+  const provider = providerOf(env);
+  if (!provider) {
     return json({ ok: false, step: 'api key', detail:
-      'No ANTHROPIC_API_KEY secret is set on this Worker. Add it under Settings > Variables and Secrets, named exactly ANTHROPIC_API_KEY.' }, 200, origin);
+      'No API key secret is set on this Worker. Add one under Settings > Variables and Secrets, named exactly GEMINI_API_KEY (free tier) or ANTHROPIC_API_KEY (paid).' }, 200, origin);
   }
   let res;
   try {
-    res = await callAnthropic(env.ANTHROPIC_API_KEY, 'portfolio',
+    res = await callModel(env, 'portfolio',
       [{ role: 'user', content: 'Reply with the single word OK.' }]);
   } catch (e) {
-    return json({ ok: false, step: 'network', detail: 'Worker could not reach api.anthropic.com: ' + e.message }, 200, origin);
+    return json({ ok: false, provider: provider, step: 'network', detail: 'Worker could not reach the model provider: ' + e.message }, 200, origin);
   }
   const raw = await res.text();
   if (!res.ok) {
-    let detail = raw;
-    try { const p = JSON.parse(raw); detail = (p.error && (p.error.message || p.error.type)) || raw; } catch (e) {}
-    return json({ ok: false, step: 'anthropic', http: res.status, detail: detail }, 200, origin);
+    return json({ ok: false, provider: provider, step: 'provider rejected the request',
+      http: res.status, detail: errorReason(raw, res.status) }, 200, origin);
   }
   let data;
   try { data = JSON.parse(raw); } catch (e) {
-    return json({ ok: false, step: 'parse', detail: raw.slice(0, 400) }, 200, origin);
+    return json({ ok: false, provider: provider, step: 'parse', detail: raw.slice(0, 400) }, 200, origin);
   }
-  const text = (data.content || []).filter(function (b) { return b.type === 'text'; })
-    .map(function (b) { return b.text; }).join('').trim();
+  const text = extractText(provider, data);
   return json({
     ok: !!text,
+    provider: provider,
+    model: provider === 'gemini' ? GEMINI_MODEL : MODEL,
     step: text ? 'done' : 'empty reply',
-    model: data.model,
-    stop_reason: data.stop_reason,
     reply: text,
-    usage: data.usage,
   }, 200, origin);
+}
+
+function callModel(env, mode, messages) {
+  return providerOf(env) === 'gemini'
+    ? callGemini(env.GEMINI_API_KEY, mode, messages)
+    : callAnthropic(env.ANTHROPIC_API_KEY, mode, messages);
+}
+
+function extractText(provider, data) {
+  if (provider === 'gemini') return extractGeminiText(data);
+  return (data.content || []).filter(function (b) { return b.type === 'text'; })
+    .map(function (b) { return b.text; }).join('').trim();
+}
+
+// Pull the provider's own explanation out of an error body — it names the
+// real problem (bad key, quota exhausted, no credit) instead of a status code.
+function errorReason(raw, status) {
+  try {
+    const p = JSON.parse(raw);
+    if (p.error && (p.error.message || p.error.type)) return p.error.message || p.error.type;
+  } catch (e) {}
+  return 'HTTP ' + status;
 }
 
 export default {
@@ -173,7 +243,7 @@ export default {
     if (origin && !ALLOWED_ORIGINS.includes(origin)) {
       return json({ error: 'Origin not allowed.' }, 403, origin);
     }
-    if (!env.ANTHROPIC_API_KEY) {
+    if (!providerOf(env)) {
       return json({ error: 'Server is not configured with an API key.' }, 500, origin);
     }
 
@@ -205,30 +275,23 @@ export default {
       return json({ error: 'Send at least one user message.' }, 400, origin);
     }
 
+    const provider = providerOf(env);
     let upstream;
     try {
-      upstream = await callAnthropic(env.ANTHROPIC_API_KEY, mode, messages);
+      upstream = await callModel(env, mode, messages);
     } catch (e) {
       return json({ error: 'Worker could not reach the AI service.' }, 502, origin);
     }
 
     if (!upstream.ok) {
       const raw = await upstream.text();
-      console.log('Anthropic API error', upstream.status, raw);
+      console.log(provider + ' API error', upstream.status, raw);
       if (upstream.status === 429) {
-        return json({ error: 'The AI service is busy right now. Please try again in a moment.' }, 429, origin);
+        return json({ error: 'The AI service is busy or the daily free quota is used up. Please try again later.' }, 429, origin);
       }
-      // Forward Anthropic's own reason. It names the actual problem (expired
-      // key, credit balance, bad request) instead of a generic failure that
-      // takes several rounds of guessing to diagnose.
-      let reason = 'HTTP ' + upstream.status;
-      try {
-        const parsed = JSON.parse(raw);
-        if (parsed.error && (parsed.error.message || parsed.error.type)) {
-          reason = parsed.error.message || parsed.error.type;
-        }
-      } catch (e) {}
-      return json({ error: reason }, 502, origin);
+      // Forward the provider's own reason rather than a generic failure —
+      // it names the actual problem and saves rounds of guessing.
+      return json({ error: errorReason(raw, upstream.status) }, 502, origin);
     }
 
     const data = await upstream.json();
@@ -237,11 +300,7 @@ export default {
       return json({ error: 'The AI declined to answer that request.' }, 200, origin);
     }
 
-    const text = (data.content || [])
-      .filter(function (b) { return b.type === 'text'; })
-      .map(function (b) { return b.text; })
-      .join('')
-      .trim();
+    const text = extractText(provider, data);
 
     if (!text) {
       return json({ error: 'The AI returned an empty response.' }, 502, origin);

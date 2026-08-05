@@ -304,18 +304,24 @@ footer span { color: #fff; font-weight: 600; }
 .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes blink { 0%,80%,100%{opacity:0.2;} 40%{opacity:1;} }
 
-.input-row { display: flex; gap: 8px; width: 100%; }
+.input-row { display: flex; gap: 8px; width: 100%; align-items: flex-end; }
 .txt-in {
-  flex: 1; padding: 12px 14px; font-size: 15px;
+  flex: 1; padding: 11px 14px; font-size: 15px;
   border: 2px solid rgba(201,168,76,0.2); border-radius: 10px;
-  color: var(--text); outline: none; transition: border-color 0.2s;
+  color: var(--text); outline: none; transition: border-color 0.2s, height 0.1s;
   background: #fff;
+  /* Two lines visible by default, growing to six as the learner types, so a
+     pasted paragraph is readable instead of scrolling inside one line. */
+  font-family: 'DM Sans', sans-serif; line-height: 1.5;
+  min-height: 62px; max-height: 160px;
+  resize: none; overflow-y: auto; display: block; width: 100%;
 }
 .txt-in:focus { border-color: var(--navy); }
 .send-btn {
   background: var(--navy); color: #fff; border: none;
-  border-radius: 10px; padding: 12px 18px; font-size: 14px;
+  border-radius: 10px; padding: 0 18px; font-size: 14px;
   font-weight: 600; cursor: pointer; transition: background 0.2s;
+  height: 62px; flex-shrink: 0;
 }
 .send-btn:hover { background: var(--navy2); }
 
@@ -529,7 +535,8 @@ footer span { color: #fff; font-weight: 600; }
   .pv-body { padding: 16px 13px calc(80px + env(safe-area-inset-bottom)); }
   .chat-area { height: 62vh; height: 62dvh; padding: 13px; }
   .cm-bub { font-size: 14.5px; max-width: 91%; padding: 12px 14px; }
-  .txt-in { font-size: 16px; min-width: 0; }
+  .txt-in { font-size: 16px; min-width: 0; min-height: 58px; }
+  .send-btn { height: 58px; }
   .send-btn { font-size: 14px; padding: 12px 14px; }
   .upload-lbl { padding: 20px 14px; }
   .form-grp input { font-size: 16px; }
@@ -718,7 +725,6 @@ footer span { color: #fff; font-weight: 600; }
         <div class="tag">Virtual Assistant · EduClaas</div>
       </div>
     </div>
-    <div class="nav-avatar">AM</div>
   </nav>
 
   <div class="hero">
@@ -906,12 +912,9 @@ footer span { color: #fff; font-weight: 600; }
       <div class="info-box-title">📋 What this feature does</div>
       <p>Get a second opinion on your assignment <b>before</b> you submit it — so you can fix the weak parts while there's still time.</p>
       <ul>
-        <li><b>Upload or paste</b> your assignment (PDF, DOCX, PPT or text).</li>
-        <li>It <b>reads what you actually wrote</b> and returns clear <b>areas for improvement</b> plus an <b>estimated grade out of 100</b>.</li>
         <li><b>Act on it:</b> fix the flagged points, re-upload, and see if the estimate moves up.</li>
         <li>Download the feedback as a report to keep or share with your mentor.</li>
       </ul>
-      <span class="info-note">🔒 <b>No sign-in, no account, nothing to install.</b> It grades against general academic standards — structure, argument, evidence and referencing — not your exact course rubric, so treat the grade as a guide rather than your official mark.</span>
     </div>
     <!-- CAPTURE SCREEN -->
     <div id="f-capture" class="capture-screen">
@@ -934,11 +937,10 @@ footer span { color: #fff; font-weight: 600; }
       </label>
       <div class="file-chip" id="f-chip">📎 <span id="f-fname"></span></div>
       <div class="chat-area" id="f-chat">
-        <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot">Upload your assignment or type a specific question. I will provide Areas for Improvement and an Estimated Grade.</div></div>
       </div>
       <button class="dl-btn" id="f-dlbtn" onclick="doDownload()">⬇ Download Feedback</button>
       <div class="input-row" style="margin-top:12px;">
-        <input class="txt-in" id="f-input" placeholder="Ask a specific question..." onkeydown="if(event.key==='Enter')sendFeedback()">
+        <textarea class="txt-in" id="f-input" rows="2" placeholder="Ask a specific question, or paste your assignment text here..." oninput="autoGrow(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendFeedback();}"></textarea>
         <button class="send-btn" onclick="sendFeedback()">Send</button>
       </div>
     </div>
@@ -963,12 +965,6 @@ footer span { color: #fff; font-weight: 600; }
     <div class="info-box">
       <div class="info-box-title">🗂️ What a portfolio is for</div>
       <p>A portfolio is your <b>proof of work</b>. Your certificate says what you studied; your portfolio shows what you can actually <b>do</b> — real projects, real results, in one link you can send to anyone.</p>
-      <ul>
-        <li><b>Job applications:</b> recruiters shortlist on evidence, not module lists. One link beats a paragraph of claims.</li>
-        <li><b>Placement &amp; capstone:</b> it's the artefact your mentor and the Talent Acquisition team review when assessing your readiness.</li>
-        <li><b>Yourself:</b> building it forces you to name what you learned and what you produced — useful for interviews.</li>
-      </ul>
-      <p style="margin-top:10px;">This feature walks you through <b>what to put in it</b>, <b>how to structure it</b>, and <b>how to build it free</b> with Carrd or Framer. Ask anything specific to your pillar in the chat below.</p>
     </div>
     <!-- CAPTURE -->
     <div id="p-capture" class="capture-screen">
@@ -985,14 +981,12 @@ footer span { color: #fff; font-weight: 600; }
     <!-- PORTFOLIO SCREEN -->
     <div id="p-main" style="display:none;">
       <div class="chat-area" id="p-chat">
-        <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot">Here is your portfolio guidance for EduClaas learners.</div></div>
         <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot"><strong>Recommended Structure:</strong><br>1. Introduction / About Me — a 3–4 sentence bio: who you are, your pillar (e.g. Digital Marketing, Data Science, Software Development), and what you're aiming for.<br>2. Skills — separate technical skills (tools, languages, frameworks) from soft skills.<br>3. Projects / Assignments — your 3–5 strongest pieces of work, each with the problem, what you did, and the outcome (quantify it where you can, e.g. "increased engagement by 20%").<br>4. Certifications — course completions, SkillsFuture-recognised credentials, any external certs.<br>5. Contact — email and LinkedIn, clearly visible, no digging required.</div></div>
-        <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot"><strong>Tool 1 — Carrd</strong><br>Best if: you want a clean one-page portfolio live in ~30 minutes with no design experience needed.<br>How: go to carrd.co → Sign Up (free tier lets you build up to 3 sites) → pick a one-page template → replace each section with your own bio/skills/projects/contact → Publish → you get a shareable carrd.co link (or connect your own domain on a paid plan).<br>Limits: themes can't be swapped after you start, and CSS customisation is limited — fine for a simple, fast portfolio, less fine if you want a highly custom look.</div></div>
-        <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot"><strong>Tool 2 — Framer</strong><br>Best if: you want a more polished, multi-page portfolio with animations and a more "designed" feel — worth the extra setup time if you're in a visual field (Digital Marketing, UX, Design-adjacent Business projects).<br>How: go to framer.com → Sign Up → start from a portfolio template (2,000+ available, switchable anytime) or a blank canvas → edit sections/add pages → Publish.<br>Limits: steeper learning curve than Carrd (expect over an hour to get comfortable), and check the current free-vs-paid plan details on their site before committing, since plans change.</div></div>
-        <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot">Quick pick: need something live today with zero learning curve → <strong>Carrd</strong>. Have more time and want a portfolio that looks custom-designed → <strong>Framer</strong>. Ask me anything specific — e.g. "what should my Data Science portfolio include" or "how do I write my About Me section."</div></div>
+        <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot"><strong>Tool 1 — Carrd</strong><br>Best if: you want a clean one-page portfolio live in ~30 minutes with no design experience needed.<br>How: go to carrd.co → Sign Up (free tier lets you build up to 3 sites) → pick a one-page template → replace each section with your own bio/skills/projects/contact → Publish → you get a shareable carrd.co link (or connect your own domain on a paid plan).</div></div>
+        <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot"><strong>Tool 2 — Framer</strong><br>Best if: you want a more polished, multi-page portfolio with animations and a more "designed" feel — worth the extra setup time if you're in a visual field (Digital Marketing, UX, Design-adjacent Business projects).<br>How: go to framer.com → Sign Up → start from a portfolio template (2,000+ available, switchable anytime) or a blank canvas → edit sections/add pages → Publish.</div></div>
       </div>
       <div class="input-row">
-        <input class="txt-in" id="p-input" placeholder="Ask any portfolio question..." onkeydown="if(event.key==='Enter')sendPortfolio()">
+        <textarea class="txt-in" id="p-input" rows="2" placeholder="Ask any portfolio question..." oninput="autoGrow(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendPortfolio();}"></textarea>
         <button class="send-btn" onclick="sendPortfolio()">Send</button>
       </div>
     </div>
@@ -1016,7 +1010,7 @@ footer span { color: #fff; font-weight: 600; }
   <div class="pv-body">
     <div class="info-box">
       <div class="info-box-title">🔔 What this feature does</div>
-      <p>Stops learners missing deadlines because nobody told them. Look up a learner, see every assignment due, and push a reminder straight to their chat — no manual chasing.</p>
+      <p>Keeps learners ahead of their deadlines. Look up a learner, see every assignment due, and push a reminder straight to their chat — no manual chasing.</p>
       <ul>
         <li><b>Enter</b> the learner's name and cohort code.</li>
         <li><b>Review</b> their upcoming deadlines before anything is sent.</li>
@@ -1063,7 +1057,7 @@ footer span { color: #fff; font-weight: 600; }
   <div class="pv-body">
     <div class="info-box">
       <div class="info-box-title">🎓 What this feature does</div>
-      <p>Placement isn't automatic — you have to show you've met the criteria. This checks where you stand <b>before</b> you appeal, so you know what's still missing.</p>
+      <p>Placement is awarded against defined criteria. Use this to assess your standing and evidence your case <b>before</b> submitting an appeal, so your application goes forward complete.</p>
       <ul>
         <li><b>Tick</b> each criterion you've met and <b>attach proof</b> for it.</li>
         <li><b>Submit</b> to get an eligibility score out of 100 with a breakdown per criterion.</li>
@@ -1217,14 +1211,6 @@ function openPage(id) {
     document.getElementById('r-lookup').style.display = 'block';
     document.getElementById('r-review').style.display = 'none';
     document.getElementById('r-success').style.display = 'none';
-  }
-  if (id === 'feedback') {
-    var fc = document.getElementById('f-chat');
-    if (fc && fc.children.length <= 1) {
-      var u = loadUser();
-      var msg = u.n ? ('Hi ' + u.n + '! Upload your assignment or ask me any question.') : 'Upload your assignment or ask me any question. I will provide Areas for Improvement and an Estimated Grade.';
-      addBot('f-chat', msg);
-    }
   }
 }
 function closePage(id) {
@@ -1422,10 +1408,23 @@ function startEligibility() {
 // ── CHAT HELPERS ──────────────────────────────
 // Shown once per failed live-AI reply so the cause is visible in the app
 // rather than buried in the console.
+// Deliberately silent for learners: a backend problem is the operator's to
+// fix, not something to show a student mid-assignment. The reason is still
+// logged to the console and reported by msAiTest().
 function addAiFallbackNotice(chatId) {
-  if (!aiConfigured() || !lastAiError) return;
-  addBot(chatId, '<span style="opacity:0.75;font-size:12.5px;">\u26a0\ufe0f Live AI unavailable (' +
-    escapeHtml(lastAiError) + ') \u2014 showing the built-in answer instead.</span>');
+  if (lastAiError) console.warn('MentorSync: live AI unavailable —', lastAiError);
+}
+
+// Grows the message box with the text, up to the CSS max-height.
+function autoGrow(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+}
+function resetInput(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.value = '';
+  el.style.height = '';
 }
 
 function addBot(chatId, html) {
@@ -2045,7 +2044,7 @@ function getAiFeedbackQA(question) {
 function sendFeedback() {
   var inp = document.getElementById('f-input');
   var q = inp.value.trim(); if (!q) return;
-  addUsr('f-chat', q); inp.value = '';
+  addUsr('f-chat', q); resetInput('f-input');
   addTyping('f-chat');
 
   var wordCount = q.split(/\s+/).filter(Boolean).length;
@@ -2190,7 +2189,7 @@ function formatReport(text) {
 function sendPortfolio() {
   var inp = document.getElementById('p-input');
   var q = inp.value.trim(); if (!q) return;
-  addUsr('p-chat', q); inp.value = '';
+  addUsr('p-chat', q); resetInput('p-input');
   addTyping('p-chat');
   portfolioChatHistory.push({ role: 'user', content: q });
 
