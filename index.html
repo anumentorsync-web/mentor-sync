@@ -965,6 +965,9 @@ footer span { color: #fff; font-weight: 600; }
     <div class="info-box">
       <div class="info-box-title">🗂️ What a portfolio is for</div>
       <p>A portfolio is your <b>proof of work</b>. Your certificate says what you studied; your portfolio shows what you can actually <b>do</b> — real projects, real results, in one link you can send to anyone.</p>
+      <ul>
+        <li><b>Already have a portfolio?</b> Upload the document or paste its link above for an instant review — you'll get specific, prioritised improvements rather than general guidance.</li>
+      </ul>
     </div>
     <!-- CAPTURE -->
     <div id="p-capture" class="capture-screen">
@@ -980,6 +983,16 @@ footer span { color: #fff; font-weight: 600; }
     </div>
     <!-- PORTFOLIO SCREEN -->
     <div id="p-main" style="display:none;">
+      <label class="upload-lbl">
+        <div class="upload-icon">🗂️</div>
+        <div class="upload-txt">Already have a portfolio? Tap to upload it for a review<br><small style="color:var(--muted);font-size:12px;">Supported documents: PDF, DOCX, PPT, Text</small></div>
+        <input type="file" accept="*/*" onchange="handlePortfolioUpload(this)">
+      </label>
+      <div class="file-chip" id="p-chip">📎 <span id="p-fname"></span></div>
+      <div class="input-row" style="margin-bottom:14px;">
+        <input class="txt-in" id="p-link" style="min-height:0;height:46px;" placeholder="…or paste your portfolio link (e.g. yourname.carrd.co)" onkeydown="if(event.key==='Enter'){event.preventDefault();submitPortfolioLink();}">
+        <button class="send-btn" style="height:46px;" onclick="submitPortfolioLink()">Review</button>
+      </div>
       <div class="chat-area" id="p-chat">
         <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot"><strong>Recommended Structure:</strong><br>1. Introduction / About Me — a 3–4 sentence bio: who you are, your pillar (e.g. Digital Marketing, Data Science, Software Development), and what you're aiming for.<br>2. Skills — separate technical skills (tools, languages, frameworks) from soft skills.<br>3. Projects / Assignments — your 3–5 strongest pieces of work, each with the problem, what you did, and the outcome (quantify it where you can, e.g. "increased engagement by 20%").<br>4. Certifications — course completions, SkillsFuture-recognised credentials, any external certs.<br>5. Contact — email and LinkedIn, clearly visible, no digging required.</div></div>
         <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot"><strong>Tool 1 — Carrd</strong><br>Best if: you want a clean one-page portfolio live in ~30 minutes with no design experience needed.<br>How: go to carrd.co → Sign Up (free tier lets you build up to 3 sites) → pick a one-page template → replace each section with your own bio/skills/projects/contact → Publish → you get a shareable carrd.co link (or connect your own domain on a paid plan).</div></div>
@@ -1834,71 +1847,126 @@ async function extractPptxText(f) {
   return text;
 }
 
+// Reads a file to plain text. Returns {text} on success, or {error} with a
+// message written for the learner. Shared by both upload paths.
+async function readUploadedFile(f, kind) {
+  var ext = f.name.split('.').pop().toLowerCase();
+  var text = '';
+
+  if (ext === 'pdf') {
+    text = await extractPdfText(f);
+
+  } else if (ext === 'docx') {
+    if (typeof mammoth === 'undefined') {
+      await new Promise(function(res, rej) {
+        var s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+        s.onload = res; s.onerror = rej; document.head.appendChild(s);
+      });
+    }
+    var ab = await f.arrayBuffer();
+    var r = await mammoth.extractRawText({arrayBuffer: ab});
+    text = r.value;
+
+  } else if (ext === 'pptx') {
+    text = await extractPptxText(f);
+
+  } else if (ext === 'doc' || ext === 'ppt') {
+    return { error: 'The older <strong>.' + ext + '</strong> format (pre-2007 Office) can\'t be read automatically. Please save it as <strong>.' + (ext === 'doc' ? 'docx' : 'pptx') + '</strong> and re-upload, or paste the text directly below.' };
+
+  } else if (ext === 'xls' || ext === 'xlsx') {
+    return { error: 'Spreadsheet files aren\'t supported for text analysis — please paste the relevant text directly below.' };
+
+  } else if (f.type.indexOf('image/') === 0) {
+    return { error: 'Images can\'t be read automatically yet — please paste your ' + kind + ' text directly below.' };
+
+  } else {
+    text = await f.text();
+  }
+
+  if (!text || looksLikeGarbage(text)) {
+    return { error: 'I couldn\'t reliably read this file — supported for automatic reading: <strong>.pdf</strong>, <strong>.docx</strong>, <strong>.pptx</strong> and plain text (<strong>.txt</strong>). Please paste your ' + kind + ' text directly into the box below.' };
+  }
+  return { text: text };
+}
+
 async function handleUpload(inp) {
   if (!inp.files || !inp.files[0]) return;
   var f = inp.files[0];
+  inp.value = ''; // allow re-uploading the same file after edits
   document.getElementById('f-fname').textContent = f.name;
   document.getElementById('f-chip').style.display = 'flex';
-  addBot('f-chat', '📎 Received: <strong>' + f.name + '</strong>. Reading and analysing...');
+  addBot('f-chat', '📎 Received: <strong>' + escapeHtml(f.name) + '</strong>. Reading and analysing...');
   addTyping('f-chat');
-  var ext = f.name.split('.').pop().toLowerCase();
+
   try {
-    var text = '';
-    var unsupported = false;
-    var unsupportedMsg = null;
-
-    if (ext === 'pdf') {
-      text = await extractPdfText(f);
-
-    } else if (ext === 'docx') {
-      if (typeof mammoth === 'undefined') {
-        await new Promise(function(res, rej) {
-          var s = document.createElement('script');
-          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
-          s.onload = res; s.onerror = rej; document.head.appendChild(s);
-        });
-      }
-      var ab2 = await f.arrayBuffer();
-      var res2 = await mammoth.extractRawText({arrayBuffer: ab2});
-      text = res2.value;
-
-    } else if (ext === 'pptx') {
-      text = await extractPptxText(f);
-
-    } else if (ext === 'doc' || ext === 'ppt') {
-      unsupported = true;
-      unsupportedMsg = 'The older <strong>.' + ext + '</strong> format (pre-2007 Office) can\'t be read automatically. Please save/export it as <strong>.' + (ext === 'doc' ? 'docx' : 'pptx') + '</strong> and re-upload, or paste your text directly below.';
-
-    } else if (ext === 'xls' || ext === 'xlsx') {
-      unsupported = true;
-      unsupportedMsg = 'Spreadsheet files aren\'t supported for text analysis — please paste the relevant text directly below.';
-
-    } else if (f.type.startsWith('image/')) {
-      unsupported = true;
-      unsupportedMsg = 'Images can\'t be read automatically yet — please paste your assignment text directly below.';
-
-    } else {
-      // Plain text formats (.txt, .md, etc.)
-      text = await f.text();
-      if (looksLikeGarbage(text)) unsupported = true;
-    }
-
+    var read = await readUploadedFile(f, 'assignment');
     rmTyping('f-chat');
-    if (unsupported || looksLikeGarbage(text)) {
-      addBot('f-chat', unsupportedMsg || 'I couldn\'t reliably read this file — supported for automatic reading: <strong>.pdf</strong>, <strong>.docx</strong>, <strong>.pptx</strong>, and plain text (<strong>.txt</strong>). Please paste your assignment text directly into the chat box below and I\'ll give you full feedback on it.');
-      return;
-    }
+    if (read.error) { addBot('f-chat', read.error); return; }
+
     addTyping('f-chat');
-    var result = await getAiAssignmentFeedback(text);
+    var result = await getAiAssignmentFeedback(read.text);
     rmTyping('f-chat');
     addBot('f-chat', formatReport(result));
     lastFeedback = result;
     document.getElementById('f-dlbtn').style.display = 'flex';
   } catch(e) {
     rmTyping('f-chat');
-    addBot('f-chat', 'Could not read the file automatically. Please paste your assignment text in the chat box below for full feedback.');
+    addBot('f-chat', 'Could not read the file automatically. Please paste your assignment text in the box below for full feedback.');
   }
 }
+
+// ── PORTFOLIO REVIEW ──────────────────────────
+// A learner with a portfolio already built wants it critiqued, not explained.
+// Accepts the exported document or a live URL.
+async function handlePortfolioUpload(inp) {
+  if (!inp.files || !inp.files[0]) return;
+  var f = inp.files[0];
+  inp.value = '';
+  document.getElementById('p-fname').textContent = f.name;
+  document.getElementById('p-chip').style.display = 'flex';
+  addBot('p-chat', '📎 Received: <strong>' + escapeHtml(f.name) + '</strong>. Reviewing your portfolio...');
+  addTyping('p-chat');
+
+  try {
+    var read = await readUploadedFile(f, 'portfolio');
+    rmTyping('p-chat');
+    if (read.error) { addBot('p-chat', read.error); return; }
+    await reviewPortfolio('Here is my existing portfolio. Review it and tell me exactly what to improve.\n\n' + read.text);
+  } catch(e) {
+    rmTyping('p-chat');
+    addBot('p-chat', 'Could not read that file. Please paste your portfolio text into the box below instead.');
+  }
+}
+
+function submitPortfolioLink() {
+  var el = document.getElementById('p-link');
+  var url = el.value.trim();
+  if (!url) return;
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  el.value = '';
+  addUsr('p-chat', 'Review my portfolio: ' + url);
+  reviewPortfolio('My portfolio is published at ' + url + '. I cannot paste its contents, so base your review on what that URL tells you about the site (platform, likely structure) and give me a concrete checklist to audit it against, section by section.');
+}
+
+// Sends a review request, falling back to the offline guidance if the AI is
+// unavailable — same contract as every other path in the app.
+async function reviewPortfolio(prompt) {
+  addTyping('p-chat');
+  portfolioChatHistory.push({ role: 'user', content: prompt });
+  try {
+    var text = await askAI('portfolio_review', portfolioChatHistory);
+    rmTyping('p-chat');
+    portfolioChatHistory.push({ role: 'assistant', content: text });
+    addBot('p-chat', formatReport(text));
+  } catch (err) {
+    console.warn('Live AI unavailable, using offline engine:', err.message);
+    portfolioChatHistory.pop();
+    rmTyping('p-chat');
+    addBot('p-chat', offlinePortfolioReview(prompt));
+  }
+}
+
 function doDownload() {
   if (!lastFeedback) return;
   var a = document.createElement('a');
@@ -2167,6 +2235,35 @@ function formatReport(text) {
   safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   safe = safe.replace(/\n/g, '<br>');
   return safe;
+}
+
+// Used when the AI is unreachable. A structured audit checklist is genuinely
+// useful on its own, unlike a generic "here's what a portfolio is" reply.
+function offlinePortfolioReview(text) {
+  var t = (text || '').toLowerCase();
+  var issues = [];
+
+  if (!/(github|kaggle|behance|dribbble|linkedin|https?:\/\/)/.test(t))
+    issues.push('<b>No links found.</b> Every project needs a live link, repo or artefact. A described project reads as a claim; a linked one is evidence.');
+  if (!/\d+\s?%|\bincreas|\breduc|\bimprov|\bsaved|\bgrew|\bconvert/.test(t))
+    issues.push('<b>No measurable outcomes.</b> Add a number to each project — "cut processing time 40%", "grew engagement 2.3k to 9k". Outcomes are what recruiters scan for.');
+  if (!/(contact|email|@|linkedin)/.test(t))
+    issues.push('<b>Contact details are not obvious.</b> Email and LinkedIn belong where they can be seen without scrolling or hunting.');
+  if (!/(certif|credential|course|diploma|skillsfuture)/.test(t))
+    issues.push('<b>No certifications section.</b> List your EduClaas credentials and any external certs with dates.');
+  if (!/(about|summary|profile|introduction|bio)/.test(t))
+    issues.push('<b>No About Me.</b> Open with 3-4 sentences: who you are, your pillar, and what role you are targeting.');
+  if (!/(skill|tool|technolog|stack|proficien)/.test(t))
+    issues.push('<b>Skills are not listed separately.</b> Split technical skills (tools, languages, frameworks) from soft skills so both are scannable.');
+  if (!/(project|case stud|portfolio piece|built|developed|designed)/.test(t))
+    issues.push('<b>Projects are not clearly delineated.</b> Give each its own block: the problem, what you did, the outcome.');
+
+  var out = '<strong>Portfolio review — what to improve</strong><br>';
+  out += issues.length
+    ? '• ' + issues.join('<br>• ')
+    : 'The core sections all appear present. Next pass: tighten each project to problem → action → measurable outcome, and make sure your strongest project is first.';
+  out += '<br><br><em>Recruiters skim in 10-15 seconds. Strongest project first, outcomes before tasks, contact details visible without scrolling.</em>';
+  return out;
 }
 
 function sendPortfolio() {

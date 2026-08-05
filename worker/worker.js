@@ -29,7 +29,7 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
 // Bumped whenever this file changes. Reported by ?selftest=1 so a stale
 // deploy is visible instead of being mistaken for a broken key.
-const WORKER_VERSION = '2026-08-04-g';
+const WORKER_VERSION = '2026-08-05-a';
 
 // Fallbacks used only if the model list itself cannot be fetched.
 const GEMINI_FALLBACKS = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-pro-latest'];
@@ -149,10 +149,37 @@ const PORTFOLIO_SYSTEM = [
   'Plain text, **bold** for key terms only, no markdown headers, no code blocks, no emoji. Do not include internal or system XML tags in your response.',
 ].join('\n');
 
+// A learner with a portfolio already built wants it critiqued, not explained.
+// Different job from PORTFOLIO_SYSTEM, so it gets its own prompt.
+const PORTFOLIO_REVIEW_SYSTEM = [
+  'You are MentorSync, reviewing an EduClaas learner\'s existing portfolio. They have already built it — they want it improved, not explained. Never give general "how to build a portfolio" advice.',
+  '',
+  'Judge it the way a recruiter skimming for 15 seconds would, then the way a hiring manager reading properly would.',
+  '',
+  'OUTPUT FORMAT — exactly this, plain text, **bold** for the two headers only, no markdown headers, no emoji:',
+  'What to improve',
+  '• (4-6 bullets, ordered most-impactful first. Each must quote or name the exact section, project or line you mean, and say specifically what to change it to. Rewrite weak lines for them where it helps.)',
+  '',
+  'What is already working',
+  '• (1-3 bullets, only if genuinely true. Omit this section entirely rather than inventing praise.)',
+  '',
+  'JUDGE ON:',
+  '- Evidence over claims: is every project linked to a live site, repo or artefact, or only described?',
+  '- Measurable outcomes: does each project state a result with a number, or only list tasks?',
+  '- Strongest work first: would a 15-second skim land on their best project?',
+  '- Structure: About Me, Skills (technical split from soft), Projects, Certifications, Contact.',
+  '- Contact visibility: email and LinkedIn findable without scrolling or hunting.',
+  '- Pillar fit: does the evidence prove competence in the field they are targeting?',
+  '',
+  'If given only a URL and no content, do not pretend to have seen the site. Say so in one line, then give a precise section-by-section audit checklist they can apply themselves.',
+  'No padding, no encouragement filler. Every line must be specific and actionable. Do not include internal or system XML tags in your response.',
+].join('\n');
+
 const MODES = {
   feedback: { system: FEEDBACK_SYSTEM, maxTokens: 4000 },
   feedback_qa: { system: FEEDBACK_QA_SYSTEM, maxTokens: 2000 },
   portfolio: { system: PORTFOLIO_SYSTEM, maxTokens: 2000 },
+  portfolio_review: { system: PORTFOLIO_REVIEW_SYSTEM, maxTokens: 3000 },
 };
 
 function corsHeaders(origin) {
