@@ -21,9 +21,18 @@
 const MODEL = 'claude-opus-5';
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 
-const GEMINI_MODEL = 'gemini-2.5-flash';
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/' +
-  GEMINI_MODEL + ':generateContent';
+// Default Gemini model. Override without touching code by adding a plain
+// variable (not a secret) named GEMINI_MODEL in the Worker's settings —
+// e.g. gemini-2.5-pro for higher quality at a lower free-tier daily cap.
+const GEMINI_MODEL_DEFAULT = 'gemini-2.5-flash';
+
+function geminiModel(env) {
+  return (env && env.GEMINI_MODEL) ? env.GEMINI_MODEL : GEMINI_MODEL_DEFAULT;
+}
+function geminiUrl(env) {
+  return 'https://generativelanguage.googleapis.com/v1beta/models/' +
+    geminiModel(env) + ':generateContent';
+}
 
 function providerOf(env) {
   if (env.GEMINI_API_KEY) return 'gemini';
@@ -117,9 +126,9 @@ function json(body, status, origin) {
 // Gemini's shape differs from Anthropic's: the system prompt is its own
 // field, roles are user/model rather than user/assistant, and the text sits
 // under parts[].
-function callGemini(apiKey, mode, messages) {
+function callGemini(env, mode, messages) {
   const config = MODES[mode];
-  return fetch(GEMINI_URL + '?key=' + encodeURIComponent(apiKey), {
+  return fetch(geminiUrl(env) + '?key=' + encodeURIComponent(env.GEMINI_API_KEY), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -179,6 +188,13 @@ async function selfTest(env, origin) {
     return json({ ok: false, step: 'api key', detail:
       'No API key secret is set on this Worker. Add one under Settings > Variables and Secrets, named exactly GEMINI_API_KEY (free tier) or ANTHROPIC_API_KEY (paid).' }, 200, origin);
   }
+  // Google AI Studio keys begin with AIza. An OAuth token (AQ....) or a
+  // Cloud service-account credential pasted here is silently rejected by the
+  // API with an opaque message, so name the mistake up front.
+  if (provider === 'gemini' && env.GEMINI_API_KEY.indexOf('AIza') !== 0) {
+    return json({ ok: false, provider: 'gemini', step: 'api key',
+      detail: 'That does not look like a Google AI Studio API key. Those begin with "AIza". Create one at https://aistudio.google.com/apikey and replace the GEMINI_API_KEY secret.' }, 200, origin);
+  }
   let res;
   try {
     res = await callModel(env, 'portfolio',
@@ -199,7 +215,7 @@ async function selfTest(env, origin) {
   return json({
     ok: !!text,
     provider: provider,
-    model: provider === 'gemini' ? GEMINI_MODEL : MODEL,
+    model: provider === 'gemini' ? geminiModel(env) : MODEL,
     step: text ? 'done' : 'empty reply',
     reply: text,
   }, 200, origin);
@@ -207,7 +223,7 @@ async function selfTest(env, origin) {
 
 function callModel(env, mode, messages) {
   return providerOf(env) === 'gemini'
-    ? callGemini(env.GEMINI_API_KEY, mode, messages)
+    ? callGemini(env, mode, messages)
     : callAnthropic(env.ANTHROPIC_API_KEY, mode, messages);
 }
 
