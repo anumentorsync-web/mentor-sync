@@ -188,13 +188,6 @@ async function selfTest(env, origin) {
     return json({ ok: false, step: 'api key', detail:
       'No API key secret is set on this Worker. Add one under Settings > Variables and Secrets, named exactly GEMINI_API_KEY (free tier) or ANTHROPIC_API_KEY (paid).' }, 200, origin);
   }
-  // Google AI Studio keys begin with AIza. An OAuth token (AQ....) or a
-  // Cloud service-account credential pasted here is silently rejected by the
-  // API with an opaque message, so name the mistake up front.
-  if (provider === 'gemini' && env.GEMINI_API_KEY.indexOf('AIza') !== 0) {
-    return json({ ok: false, provider: 'gemini', step: 'api key',
-      detail: 'That does not look like a Google AI Studio API key. Those begin with "AIza". Create one at https://aistudio.google.com/apikey and replace the GEMINI_API_KEY secret.' }, 200, origin);
-  }
   let res;
   try {
     res = await callModel(env, 'portfolio',
@@ -204,8 +197,14 @@ async function selfTest(env, origin) {
   }
   const raw = await res.text();
   if (!res.ok) {
-    return json({ ok: false, provider: provider, step: 'provider rejected the request',
-      http: res.status, detail: errorReason(raw, res.status) }, 200, origin);
+    const body = { ok: false, provider: provider, step: 'provider rejected the request',
+      http: res.status, detail: errorReason(raw, res.status) };
+    // Only offered once the provider has actually refused, and only as a
+    // hint: key formats change, so this is not treated as a validity rule.
+    if (provider === 'gemini' && (res.status === 400 || res.status === 401 || res.status === 403)) {
+      body.hint = 'If this is a key problem, check it came from https://aistudio.google.com/apikey (Get API key) rather than from Google Cloud credentials, and that the Generative Language API is enabled for its project.';
+    }
+    return json(body, 200, origin);
   }
   let data;
   try { data = JSON.parse(raw); } catch (e) {
