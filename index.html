@@ -383,6 +383,95 @@ footer span { color: #fff; font-weight: 600; }
 }
 
 /* ═══════════════════════════════════════════
+   PORTFOLIO GUIDED BUILDER
+═══════════════════════════════════════════ */
+.pf-tabs {
+  display: flex; gap: 6px; background: rgba(26,46,107,0.06);
+  padding: 5px; border-radius: 12px; margin-bottom: 16px;
+}
+.pf-tab {
+  flex: 1; text-align: center; padding: 9px 6px; border-radius: 9px;
+  font-size: 13px; font-weight: 600; color: var(--muted);
+  cursor: pointer; border: none; background: transparent;
+  transition: all 0.18s; font-family: 'DM Sans', sans-serif;
+}
+.pf-tab.active { background: #fff; color: var(--navy); box-shadow: 0 1px 4px rgba(26,46,107,0.12); }
+
+/* progress rail */
+.pf-rail { display: flex; align-items: center; gap: 4px; margin-bottom: 16px; }
+.pf-dot {
+  flex: 1; height: 5px; border-radius: 3px;
+  background: rgba(26,46,107,0.12); transition: background 0.25s;
+}
+.pf-dot.done { background: var(--gold); }
+.pf-dot.now { background: var(--navy); }
+.pf-count {
+  font-size: 11px; font-weight: 700; color: var(--muted);
+  letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;
+}
+
+.pf-card {
+  background: #fff; border: 1.5px solid rgba(26,46,107,0.12);
+  border-radius: 14px; padding: 18px; margin-bottom: 14px;
+}
+.pf-title {
+  font-family: 'Playfair Display', serif; font-size: 19px;
+  color: var(--navy); font-weight: 700; margin-bottom: 5px;
+}
+.pf-why { font-size: 13.5px; color: var(--muted); line-height: 1.55; margin-bottom: 13px; }
+.pf-include {
+  background: #F7F9FD; border-radius: 10px; padding: 12px 14px; margin-bottom: 14px;
+}
+.pf-include-h {
+  font-size: 10.5px; font-weight: 700; color: var(--navy);
+  letter-spacing: 1px; text-transform: uppercase; margin-bottom: 7px;
+}
+.pf-include ul { margin: 0 0 0 17px; padding: 0; }
+.pf-include li { font-size: 13.5px; color: var(--text); line-height: 1.55; margin-bottom: 4px; }
+.pf-include li:last-child { margin-bottom: 0; }
+
+.pf-ask { font-size: 13px; color: var(--navy); font-weight: 600; margin-bottom: 7px; }
+.pf-nav { display: flex; gap: 8px; margin-top: 4px; }
+.pf-btn {
+  flex: 1; padding: 12px; border-radius: 10px; font-size: 14px; font-weight: 700;
+  cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s;
+  border: 2px solid var(--navy); background: var(--navy); color: #fff;
+}
+.pf-btn.ghost { background: #fff; color: var(--navy); }
+.pf-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* generated draft */
+.pf-draft {
+  background: #FBFCFE; border: 1.5px solid rgba(26,46,107,0.12);
+  border-left: 4px solid var(--gold); border-radius: 0 12px 12px 0;
+  padding: 15px 16px; margin-bottom: 12px;
+}
+.pf-draft-h {
+  font-size: 10.5px; font-weight: 700; color: var(--navy);
+  letter-spacing: 1px; text-transform: uppercase; margin-bottom: 9px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.pf-copy {
+  background: var(--navy); color: #fff; border: none; border-radius: 7px;
+  padding: 5px 11px; font-size: 11px; font-weight: 700; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; letter-spacing: 0.5px;
+}
+.pf-draft-body { font-size: 14px; line-height: 1.65; color: var(--text); white-space: pre-wrap; }
+.pf-notes {
+  margin-top: 12px; padding-top: 11px; border-top: 1px dashed rgba(26,46,107,0.18);
+  font-size: 13px; color: var(--muted); line-height: 1.6;
+}
+.pf-done {
+  background: #EFF7F1; border: 1.5px solid #9FD4B4; border-radius: 12px;
+  padding: 16px; font-size: 14px; line-height: 1.6; color: #1F4D33;
+}
+@media (max-width: 640px) {
+  .pf-tab { font-size: 12px; padding: 9px 4px; }
+  .pf-card { padding: 15px; }
+  .pf-title { font-size: 17px; }
+}
+
+/* ═══════════════════════════════════════════
    UPLOAD
 ═══════════════════════════════════════════ */
 .upload-lbl {
@@ -1023,7 +1112,9 @@ footer span { color: #fff; font-weight: 600; }
       <div class="info-box-title">🗂️ What a portfolio is for</div>
       <p>A portfolio is your <b>proof of work</b>. Your certificate says what you studied; your portfolio shows what you can actually <b>do</b> — real projects, real results, in one link you can send to anyone.</p>
       <ul>
-        <li><b>Already have a portfolio?</b> Upload the document or paste its link above for an instant review — you'll get specific, prioritised improvements rather than general guidance.</li>
+        <li><b>Step-by-step</b> — a guided build, one section at a time. Each step drafts the actual content for you, ready to paste.</li>
+        <li><b>Ask anything</b> — any portfolio question, answered for your field.</li>
+        <li><b>Review mine</b> — already built one? Upload it or paste the link for a prioritised list of what to improve.</li>
       </ul>
     </div>
     <!-- CAPTURE -->
@@ -1040,25 +1131,48 @@ footer span { color: #fff; font-weight: 600; }
     </div>
     <!-- PORTFOLIO SCREEN -->
     <div id="p-main" style="display:none;">
-      <label class="upload-lbl">
-        <div class="upload-icon">🗂️</div>
-        <div class="upload-txt">Already have a portfolio? Tap to upload it for a review<br><small style="color:var(--muted);font-size:12px;">Supported documents: PDF, DOCX, PPT, Text</small></div>
-        <input type="file" accept="*/*" onchange="handlePortfolioUpload(this)">
-      </label>
-      <div class="file-chip" id="p-chip">📎 <span id="p-fname"></span></div>
-      <div class="input-row" style="margin-bottom:14px;">
-        <input class="txt-in" id="p-link" style="min-height:0;height:46px;" placeholder="…or paste your portfolio link (e.g. yourname.carrd.co)" onkeydown="if(event.key==='Enter'){event.preventDefault();submitPortfolioLink();}">
-        <button class="send-btn" style="height:46px;" onclick="submitPortfolioLink()">Review</button>
+
+      <div class="pf-tabs">
+        <button class="pf-tab active" id="pf-tab-guide"  onclick="pfTab('guide')">Step-by-step</button>
+        <button class="pf-tab"        id="pf-tab-ask"    onclick="pfTab('ask')">Ask anything</button>
+        <button class="pf-tab"        id="pf-tab-review" onclick="pfTab('review')">Review mine</button>
       </div>
-      <div class="chat-area" id="p-chat">
-        <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot"><strong>Recommended Structure:</strong><br>1. Introduction / About Me — a 3–4 sentence bio: who you are, your pillar (e.g. Digital Marketing, Data Science, Software Development), and what you're aiming for.<br>2. Skills — separate technical skills (tools, languages, frameworks) from soft skills.<br>3. Projects / Assignments — your 3–5 strongest pieces of work, each with the problem, what you did, and the outcome (quantify it where you can, e.g. "increased engagement by 20%").<br>4. Certifications — course completions, SkillsFuture-recognised credentials, any external certs.<br>5. Contact — email and LinkedIn, clearly visible, no digging required.</div></div>
-        <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot"><strong>Tool 1 — Carrd</strong><br>Best if: you want a clean one-page portfolio live in ~30 minutes with no design experience needed.<br>How: go to carrd.co → Sign Up (free tier lets you build up to 3 sites) → pick a one-page template → replace each section with your own bio/skills/projects/contact → Publish → you get a shareable carrd.co link (or connect your own domain on a paid plan).</div></div>
-        <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot"><strong>Tool 2 — Framer</strong><br>Best if: you want a more polished, multi-page portfolio with animations and a more "designed" feel — worth the extra setup time if you're in a visual field (Digital Marketing, UX, Design-adjacent Business projects).<br>How: go to framer.com → Sign Up → start from a portfolio template (2,000+ available, switchable anytime) or a blank canvas → edit sections/add pages → Publish.</div></div>
+
+      <!-- ── GUIDED BUILDER ── -->
+      <div id="pf-pane-guide">
+        <div class="pf-count" id="pf-count"></div>
+        <div class="pf-rail" id="pf-rail"></div>
+        <div id="pf-body"></div>
       </div>
-      <div class="input-row">
-        <textarea class="txt-in" id="p-input" rows="2" placeholder="Ask any portfolio question..." oninput="autoGrow(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendPortfolio();}"></textarea>
-        <button class="send-btn" onclick="sendPortfolio()">Send</button>
+
+      <!-- ── FREE Q&A ── -->
+      <div id="pf-pane-ask" style="display:none;">
+        <div class="chat-area" id="p-chat">
+          <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot">Ask me anything about portfolios — what to include, how to phrase something, which tool to use, or anything specific to your field.</div></div>
+        </div>
+        <div class="input-row">
+          <textarea class="txt-in" id="p-input" rows="2" placeholder="Ask any portfolio question..." oninput="autoGrow(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendPortfolio();}"></textarea>
+          <button class="send-btn" onclick="sendPortfolio()">Send</button>
+        </div>
       </div>
+
+      <!-- ── REVIEW AN EXISTING PORTFOLIO ── -->
+      <div id="pf-pane-review" style="display:none;">
+        <label class="upload-lbl">
+          <div class="upload-icon">🗂️</div>
+          <div class="upload-txt">Tap to upload your portfolio for a review<br><small style="color:var(--muted);font-size:12px;">Supported documents: PDF, DOCX, PPT, Text</small></div>
+          <input type="file" accept="*/*" onchange="handlePortfolioUpload(this)">
+        </label>
+        <div class="file-chip" id="p-chip">📎 <span id="p-fname"></span></div>
+        <div class="input-row" style="margin-bottom:14px;">
+          <input class="txt-in" id="p-link" style="min-height:0;height:46px;" placeholder="…or paste your portfolio link" onkeydown="if(event.key==='Enter'){event.preventDefault();submitPortfolioLink();}">
+          <button class="send-btn" style="height:46px;" onclick="submitPortfolioLink()">Review</button>
+        </div>
+        <div class="chat-area" id="p-review-chat" style="height:auto;min-height:180px;">
+          <div class="cm"><div class="cm-av bot">M</div><div class="cm-bub bot">Upload your portfolio or paste its link and I will tell you exactly what to improve, most important first.</div></div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -1461,6 +1575,9 @@ function startPortfolio() {
   document.getElementById('p-main').style.display = 'block';
   saveLearnerActivity(email, name, 'Portfolio Support');
   portfolioChatHistory = []; // fresh AI conversation for this session
+  pfStep = 0; pfProfile = ''; pfDrafts = {};
+  pfTab('guide');
+  pfRender();
 }
 
 function startEligibility() {
@@ -2028,17 +2145,17 @@ async function handlePortfolioUpload(inp) {
   inp.value = '';
   document.getElementById('p-fname').textContent = f.name;
   document.getElementById('p-chip').style.display = 'flex';
-  addBot('p-chat', '📎 Received: <strong>' + escapeHtml(f.name) + '</strong>. Reviewing your portfolio...');
-  addTyping('p-chat');
+  addBot('p-review-chat', '📎 Received: <strong>' + escapeHtml(f.name) + '</strong>. Reviewing your portfolio...');
+  addTyping('p-review-chat');
 
   try {
     var read = await readUploadedFile(f, 'portfolio');
-    rmTyping('p-chat');
-    if (read.error) { addBot('p-chat', read.error); return; }
+    rmTyping('p-review-chat');
+    if (read.error) { addBot('p-review-chat', read.error); return; }
     await reviewPortfolio('Here is my existing portfolio. Review it and tell me exactly what to improve.\n\n' + read.text);
   } catch(e) {
-    rmTyping('p-chat');
-    addBot('p-chat', 'Could not read that file. Please paste your portfolio text into the box below instead.');
+    rmTyping('p-review-chat');
+    addBot('p-review-chat', 'Could not read that file. Please paste your portfolio text into the box below instead.');
   }
 }
 
@@ -2048,25 +2165,22 @@ function submitPortfolioLink() {
   if (!url) return;
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
   el.value = '';
-  addUsr('p-chat', 'Review my portfolio: ' + url);
+  addUsr('p-review-chat', 'Review my portfolio: ' + url);
   reviewPortfolio('My portfolio is published at ' + url + '. I cannot paste its contents, so base your review on what that URL tells you about the site (platform, likely structure) and give me a concrete checklist to audit it against, section by section.');
 }
 
 // Sends a review request, falling back to the offline guidance if the AI is
 // unavailable — same contract as every other path in the app.
 async function reviewPortfolio(prompt) {
-  addTyping('p-chat');
-  portfolioChatHistory.push({ role: 'user', content: prompt });
+  addTyping('p-review-chat');
   try {
-    var text = await askAI('portfolio_review', portfolioChatHistory);
-    rmTyping('p-chat');
-    portfolioChatHistory.push({ role: 'assistant', content: text });
-    addBot('p-chat', formatReport(text));
+    var text = await askAI('portfolio_review', [{ role: 'user', content: prompt }]);
+    rmTyping('p-review-chat');
+    addBot('p-review-chat', formatReport(text));
   } catch (err) {
     console.warn('Live AI unavailable, using offline engine:', err.message);
-    portfolioChatHistory.pop();
-    rmTyping('p-chat');
-    addBot('p-chat', offlinePortfolioReview(prompt));
+    rmTyping('p-review-chat');
+    addBot('p-review-chat', offlinePortfolioReview(prompt));
   }
 }
 
@@ -2439,6 +2553,240 @@ function offlinePortfolioReview(text) {
     : 'The core sections all appear present. Next pass: tighten each project to problem → action → measurable outcome, and make sure your strongest project is first.';
   out += '<br><br><em>Recruiters skim in 10-15 seconds. Strongest project first, outcomes before tasks, contact details visible without scrolling.</em>';
   return out;
+}
+
+// ── GUIDED PORTFOLIO BUILDER ──────────────────
+// Step 0 captures who the person is; every later step feeds that context to
+// the model, so a ten-year data scientist and a first-year learner get
+// materially different drafts from the same flow.
+var PF_STEPS = [
+  {
+    id: 'profile',
+    title: 'Start with your angle',
+    why: 'Everything else follows from this. A portfolio aimed at no one in particular persuades no one in particular.',
+    include: [
+      'Your field or pillar — Data Science, Digital Marketing, Business IT, Software Engineering, Systems Management, or your own.',
+      'Your role — learner, graduate, lecturer, mentor, working professional.',
+      'What this portfolio is for — a job, a placement, a promotion, teaching credibility, client work.'
+    ],
+    ask: 'Tell me who you are and what this portfolio is for',
+    placeholder: 'e.g. Data Science learner, final year, applying for analyst roles in Singapore',
+    cta: 'Set my angle'
+  },
+  {
+    id: 'about',
+    title: 'About Me',
+    why: 'Three or four sentences that tell a reader who you are and what you are aiming at, before they scroll.',
+    include: [
+      'Who you are and your field, in one sentence.',
+      'What you can do — the capability, not the coursework.',
+      'What you are looking for, stated plainly.'
+    ],
+    ask: 'Anything you want mentioned — background, standout work, where you are headed',
+    placeholder: 'e.g. career changer from finance, built a churn model that went into production',
+    cta: 'Draft my About Me'
+  },
+  {
+    id: 'skills',
+    title: 'Skills',
+    why: 'Scanned in seconds, so it has to be sorted and honest. Technical and soft skills belong in separate groups.',
+    include: [
+      'Technical: tools, languages, frameworks, platforms.',
+      'Soft: the two or three you can actually evidence elsewhere in the portfolio.',
+      'Level where it is not obvious — proficient, working knowledge, learning.'
+    ],
+    ask: 'List the tools and skills you have, roughly',
+    placeholder: 'e.g. Python, SQL, Power BI, some Tableau, presenting to stakeholders',
+    cta: 'Organise my skills'
+  },
+  {
+    id: 'projects',
+    title: 'Projects',
+    why: 'The part that does the persuading. Three to five, strongest first, each one problem then action then outcome.',
+    include: [
+      'The problem — what needed solving and for whom.',
+      'What you did — your contribution specifically, not the team\'s.',
+      'The outcome — with a number wherever one exists.',
+      'A link to the live thing, repo, deck or document.'
+    ],
+    ask: 'Describe your projects — rough notes are fine',
+    placeholder: 'e.g. dashboard for the sales team, churn prediction model, group capstone on retail analytics',
+    cta: 'Write up my projects'
+  },
+  {
+    id: 'certs',
+    title: 'Certifications',
+    why: 'Short, factual, and dated. This section is scanned for credibility, not read.',
+    include: [
+      'Course and credential names in full.',
+      'Issuing body and the date awarded.',
+      'A verification link where one exists.'
+    ],
+    ask: 'Which certifications or courses do you have',
+    placeholder: 'e.g. EduClaas Data Science diploma, Google Data Analytics, SkillsFuture modules',
+    cta: 'Format my certifications'
+  },
+  {
+    id: 'contact',
+    title: 'Contact',
+    why: 'The single most common portfolio failure is being impossible to contact after impressing someone.',
+    include: [
+      'A professional email address.',
+      'LinkedIn, with a headline that matches this portfolio.',
+      'Anything field-specific — GitHub, Kaggle, Behance, a booking link.'
+    ],
+    ask: 'What contact details do you want shown',
+    placeholder: 'e.g. email and LinkedIn, plus my GitHub',
+    cta: 'Write my contact section'
+  },
+  {
+    id: 'build',
+    title: 'Build and publish',
+    why: 'You now have the content. This is the half hour that turns it into a link you can send.',
+    include: [
+      'Carrd — one page, live in about 30 minutes, free for up to 3 sites. Best if you want it done today.',
+      'Framer — multi-page and more designed, with a steeper learning curve. Best for visual fields.',
+      'Paste each section you drafted into the matching block, then publish.'
+    ],
+    ask: 'Tell me which you are leaning towards, or ask and I will pick for you',
+    placeholder: 'e.g. I have an hour and no design experience',
+    cta: 'Get my build plan'
+  }
+];
+
+var pfStep = 0;
+var pfProfile = '';
+var pfDrafts = {};
+
+function pfTab(which) {
+  ['guide','ask','review'].forEach(function(k) {
+    document.getElementById('pf-pane-' + k).style.display = (k === which) ? 'block' : 'none';
+    document.getElementById('pf-tab-' + k).classList.toggle('active', k === which);
+  });
+}
+
+function pfRender() {
+  var s = PF_STEPS[pfStep];
+  var last = pfStep === PF_STEPS.length - 1;
+
+  document.getElementById('pf-count').textContent =
+    'Step ' + (pfStep + 1) + ' of ' + PF_STEPS.length + ' · ' + s.title;
+
+  var rail = '';
+  for (var i = 0; i < PF_STEPS.length; i++) {
+    rail += '<div class="pf-dot ' + (i < pfStep ? 'done' : (i === pfStep ? 'now' : '')) + '"></div>';
+  }
+  document.getElementById('pf-rail').innerHTML = rail;
+
+  var html = '<div class="pf-card">';
+  html += '<div class="pf-title">' + escapeHtml(s.title) + '</div>';
+  html += '<div class="pf-why">' + escapeHtml(s.why) + '</div>';
+  html += '<div class="pf-include"><div class="pf-include-h">What goes in this section</div><ul>';
+  s.include.forEach(function(li) { html += '<li>' + escapeHtml(li) + '</li>'; });
+  html += '</ul></div>';
+  html += '<div class="pf-ask">' + escapeHtml(s.ask) + '</div>';
+  html += '<textarea class="txt-in" id="pf-in" rows="2" placeholder="' + escapeHtml(s.placeholder) +
+          '" oninput="autoGrow(this)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();pfGenerate();}"></textarea>';
+  html += '<div class="pf-nav">';
+  html += '<button class="pf-btn ghost" onclick="pfBack()"' + (pfStep === 0 ? ' disabled' : '') + '>Back</button>';
+  html += '<button class="pf-btn" id="pf-go" onclick="pfGenerate()">' + escapeHtml(s.cta) + '</button>';
+  html += '</div></div>';
+  html += '<div id="pf-out"></div>';
+
+  document.getElementById('pf-body').innerHTML = html;
+  var out = pfDrafts[s.id];
+  if (out) pfShow(out, last);
+}
+
+function pfBack() { if (pfStep > 0) { pfStep--; pfRender(); } }
+function pfNext() {
+  if (pfStep < PF_STEPS.length - 1) { pfStep++; pfRender(); document.getElementById('pf-body').scrollIntoView({block:'start'}); }
+}
+
+function pfShow(text, last) {
+  var parsed = pfParse(text);
+  var html = '<div class="pf-draft">';
+  html += '<div class="pf-draft-h"><span>Your draft — paste this in</span>' +
+          '<button class="pf-copy" onclick="pfCopy(this)">Copy</button></div>';
+  html += '<div class="pf-draft-body">' + escapeHtml(parsed.draft) + '</div>';
+  if (parsed.notes) html += '<div class="pf-notes">' + inlineBold(parsed.notes).replace(/\n/g, '<br>') + '</div>';
+  html += '</div>';
+  html += last
+    ? '<div class="pf-done"><b>That is the full portfolio.</b> Work back through the steps with the Back button to copy any section again, or switch to “Review mine” once it is published and I will audit it.</div>'
+    : '<div class="pf-nav"><button class="pf-btn" onclick="pfNext()">Next step →</button></div>';
+  document.getElementById('pf-out').innerHTML = html;
+  document.getElementById('pf-out').scrollIntoView({ block: 'nearest' });
+}
+
+// DRAFT:/NOTES: is the model's format; anything else is shown as-is.
+function pfParse(text) {
+  var m = text.match(/DRAFT:\s*([\s\S]*?)(?:\n\s*NOTES:\s*([\s\S]*))?$/i);
+  if (!m) return { draft: text.trim(), notes: '' };
+  return { draft: (m[1] || '').trim(), notes: (m[2] || '').trim() };
+}
+
+function pfCopy(btn) {
+  var body = btn.closest('.pf-draft').querySelector('.pf-draft-body');
+  var done = function() { btn.textContent = 'Copied'; setTimeout(function(){ btn.textContent = 'Copy'; }, 1600); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(body.innerText).then(done, function(){});
+    return;
+  }
+  var r = document.createRange(); r.selectNodeContents(body);
+  var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  try { document.execCommand('copy'); done(); } catch (e) {}
+  sel.removeAllRanges();
+}
+
+async function pfGenerate() {
+  var s = PF_STEPS[pfStep];
+  var el = document.getElementById('pf-in');
+  var said = el ? el.value.trim() : '';
+  var btn = document.getElementById('pf-go');
+  var last = pfStep === PF_STEPS.length - 1;
+
+  if (s.id === 'profile') {
+    if (!said) { el.focus(); return; }
+    pfProfile = said;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Working…';
+
+  var prompt =
+    'STEP: ' + s.title + ' (' + (pfStep + 1) + ' of ' + PF_STEPS.length + ')\n' +
+    'WHO THEY ARE: ' + (pfProfile || 'not stated') + '\n' +
+    'WHAT THIS SECTION MUST CONTAIN:\n- ' + s.include.join('\n- ') + '\n' +
+    'WHAT THEY TOLD ME FOR THIS STEP: ' + (said || 'nothing — infer sensible content from who they are and mark anything uncertain in [brackets]');
+
+  try {
+    var text = await askAI('portfolio_step', [{ role: 'user', content: prompt }]);
+    pfDrafts[s.id] = text;
+    pfShow(text, last);
+  } catch (err) {
+    console.warn('Live AI unavailable, using offline template:', err.message);
+    var offline = pfOffline(s, said);
+    pfDrafts[s.id] = offline;
+    pfShow(offline, last);
+  }
+  btn.disabled = false;
+  btn.textContent = s.cta;
+}
+
+// Offline: a fill-in-the-blank template per step. Less tailored than the AI
+// draft, but still something the person can paste and edit.
+function pfOffline(s, said) {
+  var who = pfProfile || said || '[your field]';
+  var T = {
+    profile: 'DRAFT:\nAngle set: ' + who + '\n\nEvery following section will be written for this reader.\n\nNOTES:\n• Keep this in mind at each step — if a line does not serve this reader, cut it.',
+    about: 'DRAFT:\nI am a [role] working in [field], focused on [the specific thing you do].\n\nI have [X years / the length of your programme] of experience with [your two or three strongest tools or methods], and my recent work covers [project area].\n\nI am currently looking for [role or opportunity] where I can [the value you bring].\n\nNOTES:\n• Replace every bracket with something specific — vague beats nothing, specific beats vague.\n• Lead with capability, not with coursework.\n• Three to four sentences is the right length. Cut anything beyond that.',
+    skills: 'DRAFT:\nTechnical\n• [Tool or language] — [proficient / working knowledge]\n• [Tool or language] — [level]\n• [Tool or language] — [level]\n\nProfessional\n• [Skill you can evidence in a project below]\n• [Skill you can evidence in a project below]\n\nNOTES:\n• Only list a soft skill if a project below proves it.\n• Order technical skills by how central they are to the roles you want.',
+    projects: 'DRAFT:\n[Project name]\nProblem: [what needed solving, and for whom]\nWhat I did: [your specific contribution]\nOutcome: [result, with a number where one exists]\nLink: [live site, repo, deck or document]\n\n[Repeat this block for each project — three to five, strongest first]\n\nNOTES:\n• Strongest project first. Most readers stop after the first one.\n• Every project needs a link. A described project is a claim; a linked one is evidence.\n• If you have no number, state the qualitative outcome plainly rather than padding.',
+    certs: 'DRAFT:\n• [Credential name] — [issuing body], [month year]\n• [Credential name] — [issuing body], [month year]\n\nNOTES:\n• Full names, no abbreviations a reader outside your field would not know.\n• Add a verification link where the issuer provides one.\n• Newest first.',
+    contact: 'DRAFT:\nEmail: [your professional email]\nLinkedIn: [your profile URL]\n[GitHub / Kaggle / Behance / booking link, if relevant to your field]\n\nNOTES:\n• Put this where it is visible without scrolling, and again at the foot of the page.\n• Make sure your LinkedIn headline says the same thing this portfolio says.',
+    build: 'DRAFT:\nIf you want it live today: use Carrd.\n1. Go to carrd.co and sign up — the free tier covers up to 3 sites.\n2. Pick a one-page template.\n3. Paste each section you drafted into the matching block.\n4. Publish. You get a shareable link immediately.\n\nIf you have a couple of hours and want it more designed: use Framer.\n1. Go to framer.com and sign up.\n2. Start from a portfolio template.\n3. Give each section from these steps its own block or page.\n4. Publish.\n\nNOTES:\n• Publish something today and refine it later — an unfinished live portfolio beats a perfect unpublished one.\n• Once it is live, come back to the "Review mine" tab and paste the link for an audit.'
+  };
+  return T[s.id] || 'DRAFT:\n[Content for ' + s.title + ']';
 }
 
 function sendPortfolio() {

@@ -29,7 +29,7 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
 // Bumped whenever this file changes. Reported by ?selftest=1 so a stale
 // deploy is visible instead of being mistaken for a broken key.
-const WORKER_VERSION = '2026-08-05-b';
+const WORKER_VERSION = '2026-08-06-a';
 
 // Fallbacks used only if the model list itself cannot be fetched.
 const GEMINI_FALLBACKS = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-pro-latest'];
@@ -186,11 +186,39 @@ const PORTFOLIO_REVIEW_SYSTEM = [
   'No padding, no encouragement filler. Every line must be specific and actionable. Do not include internal or system XML tags in your response.',
 ].join('\n');
 
+// Drives the guided builder. The page supplies which step the person is on
+// and what they said about themselves; this returns content they can paste
+// straight into that section, not advice about how to write it.
+const PORTFOLIO_STEP_SYSTEM = [
+  'You are MentorSync, walking someone through building their portfolio one section at a time, inside EduClaas.',
+  'The user message states which STEP they are on, who they are, and what they have told you about themselves.',
+  '',
+  'Your job is to produce the actual content for that step, ready to paste. Not advice about how to write it.',
+  '',
+  'OUTPUT FORMAT — reply with ONLY the tags below, nothing before or after. No markdown headers, no emoji, no preamble.',
+  '',
+  'DRAFT:',
+  '<the finished text for this section, written in their voice, first person where natural. Use plain line breaks between items. If the step needs a list (skills, projects, certifications), give the list itself, formatted and ready to use.>',
+  '',
+  'NOTES:',
+  '• <2-4 short bullets: what you assumed, what they should swap in, and the single thing that would most strengthen this section>',
+  '',
+  'RULES:',
+  '- Write for the field and seniority they describe. A ten-year data scientist and a first-year Business IT learner get materially different drafts.',
+  '- Anyone may use this — learner, lecturer, mentor, working professional. Never assume they are a student unless they say so.',
+  '- Where they have not given you a detail, write a realistic placeholder in [square brackets] rather than leaving a gap or asking for it.',
+  '- Be concrete. Name real tools, real metrics, real outcomes appropriate to their field.',
+  '- Never invent qualifications, employers or numbers as though they were facts — those go in [brackets] for them to fill.',
+  '- No filler, no encouragement, no restating the question.',
+  '- Do not include internal or system XML tags in your response.',
+].join('\n');
+
 const MODES = {
   feedback: { system: FEEDBACK_SYSTEM, maxTokens: 4000 },
   feedback_qa: { system: FEEDBACK_QA_SYSTEM, maxTokens: 2000 },
   portfolio: { system: PORTFOLIO_SYSTEM, maxTokens: 2000 },
   portfolio_review: { system: PORTFOLIO_REVIEW_SYSTEM, maxTokens: 3000 },
+  portfolio_step: { system: PORTFOLIO_STEP_SYSTEM, maxTokens: 2500 },
 };
 
 function corsHeaders(origin) {
