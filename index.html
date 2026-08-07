@@ -326,6 +326,63 @@ footer span { color: #fff; font-weight: 600; }
 .send-btn:hover { background: var(--navy2); }
 
 /* ═══════════════════════════════════════════
+   FEEDBACK REPORT CARDS
+   Soft tints rather than the navy chat bubble: a report is read, not
+   skimmed like a message, so it gets its own lighter surface.
+═══════════════════════════════════════════ */
+.cm-bub.report {
+  background: #fff; color: var(--text);
+  border: 1.5px solid rgba(26,46,107,0.12);
+  max-width: 100%; width: 100%;
+  padding: 0; overflow: hidden;
+  border-bottom-left-radius: 12px;
+}
+.fb-grade {
+  background: linear-gradient(135deg, #F2F6FF, #FBF7EC);
+  border-bottom: 1px solid rgba(26,46,107,0.10);
+  padding: 16px 18px;
+  display: flex; align-items: center; gap: 14px;
+}
+.fb-grade-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 30px; font-weight: 700; color: var(--navy);
+  line-height: 1; white-space: nowrap;
+}
+.fb-grade-num small { font-size: 14px; color: var(--muted); font-weight: 400; }
+.fb-grade-txt { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+
+.fb-card { padding: 15px 18px; border-bottom: 1px solid rgba(26,46,107,0.07); }
+.fb-card:last-child { border-bottom: none; }
+.fb-sec {
+  display: inline-block; background: rgba(26,46,107,0.07);
+  color: var(--navy); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.8px; text-transform: uppercase;
+  padding: 3px 9px; border-radius: 20px; margin-bottom: 9px;
+}
+.fb-quote {
+  background: #FFF7E3; border-left: 3px solid var(--gold);
+  border-radius: 0 8px 8px 0; padding: 9px 12px; margin-bottom: 10px;
+  font-size: 13.5px; line-height: 1.55; color: #5B4B1F; font-style: italic;
+}
+.fb-quote.absent { background: #F4F5F8; border-left-color: #B9C0D4; color: var(--muted); font-style: normal; }
+.fb-issue { font-size: 14px; line-height: 1.55; color: var(--text); margin-bottom: 8px; }
+.fb-fix {
+  background: #EFF7F1; border-left: 3px solid #4FAE72;
+  border-radius: 0 8px 8px 0; padding: 9px 12px;
+  font-size: 14px; line-height: 1.55; color: #1F4D33;
+}
+.fb-fix b, .fb-issue b { color: inherit; }
+.fb-fix::before { content: 'FIX  '; font-size: 10px; font-weight: 700; letter-spacing: 1px; color: #4FAE72; }
+
+@media (max-width: 640px) {
+  .fb-grade { padding: 14px; gap: 11px; }
+  .fb-grade-num { font-size: 26px; }
+  .fb-card { padding: 13px 14px; }
+  .fb-quote, .fb-fix { padding: 8px 10px; font-size: 13px; }
+  .fb-issue { font-size: 13.5px; }
+}
+
+/* ═══════════════════════════════════════════
    UPLOAD
 ═══════════════════════════════════════════ */
 .upload-lbl {
@@ -1440,6 +1497,20 @@ function resetInput(id) {
   el.style.height = '';
 }
 
+// Renders a feedback reply as cards when it is in the tagged format, and
+// as an ordinary message otherwise.
+function addFeedbackReply(chatId, text) {
+  var report = parseFeedbackReport(text);
+  if (!report) { addBot(chatId, formatReport(text)); return; }
+  var c = document.getElementById(chatId);
+  var d = document.createElement('div');
+  d.className = 'cm';
+  d.innerHTML = '<div class="cm-av bot">M</div><div class="cm-bub bot report">' +
+                renderFeedbackReport(report) + '</div>';
+  c.appendChild(d);
+  c.scrollTop = c.scrollHeight;
+}
+
 function addBot(chatId, html) {
   var c = document.getElementById(chatId);
   var d = document.createElement('div'); d.className = 'cm';
@@ -1565,9 +1636,9 @@ function analyseText(rawText) {
   var pc = paragraphs.length;
 
   if (wc < 40) {
-    return 'Areas for Improvement\n' +
-      '• There are only ' + wc + ' words here — too little to assess. Paste or upload the full assignment and I will read all of it.' +
-      '\n\nEstimated Grade\nNot graded — there is not enough text to judge.';
+    return 'GRADE: 0/100\nVERDICT: Not graded — there is not enough text to judge.\n' +
+      '\n[SECTION] Length\n[QUOTE] (not present)\n[ISSUE] Only ' + wc + ' words were submitted.\n' +
+      '[FIX] Paste or upload the full assignment and I will read all of it.\n';
   }
 
   var avgSentLen = sc ? Math.round(wc / sc) : wc;
@@ -1649,72 +1720,104 @@ function analyseText(rawText) {
   var capped = score > lengthCap;
   score = Math.max(15, Math.min(lengthCap, score));
 
-  // ── Improvements, weakest dimension first ───
-  var issues = [];
-  if (wc < 300) issues.push('At ' + wc + ' words this is short for a full assignment. Check the brief — under-length usually means missing evidence and analysis, not missing filler.');
+  // ── Findings, each tied to a real extract ───
+  // Same tagged format the AI emits, so both render as identical cards.
+  var found = [];
+  function add(section, quote, issue, fix) {
+    found.push({ section: section, quote: quote || '(not present)', issue: issue, fix: fix });
+  }
 
   if (!hasThesis) {
-    issues.push('Your opening never states what you are arguing. Name the topic and your position in one sentence: "This assignment examines X and argues that Y."' +
-      (openPara ? ' It currently opens: "' + trimQuote(openPara, 120) + '"' : ''));
+    add('Introduction', openPara ? trimQuote(openPara, 120) : '',
+      'Names the topic but never states the position you are arguing.',
+      'Open with: "This assignment examines [topic] and argues that [your position]."');
   }
   if (citations === 0) {
-    issues.push('No in-text citations found. Every claim that is not your own observation needs a source — (Author, Year) in the text, with a matching reference list.');
+    add('Referencing', '',
+      'No in-text citations anywhere in ' + wc + ' words.',
+      'Add (Author, Year) after each sourced claim, plus a matching reference list.');
   } else if (per1000(citations, wc) < 2.5) {
-    issues.push('Only ' + citations + ' citation' + (citations === 1 ? '' : 's') + ' across ' + wc + ' words — thin for academic work. Aim for a source behind each substantive claim.' + (hasRefList ? '' : ' No reference list was detected either.'));
+    add('Referencing', '',
+      'Only ' + citations + ' citation' + (citations === 1 ? '' : 's') + ' across ' + wc + ' words — thin for academic work.',
+      'Put a source behind every substantive claim, not just the opening ones.');
   }
   if (unsupported) {
-    issues.push('One body paragraph runs without a citation, example or figure anywhere in it — it reads as assertion. It begins: "' + trimQuote(unsupported, 110) + '"');
+    add('Unsupported paragraph', trimQuote(unsupported, 110),
+      'This paragraph runs without a citation, example or figure — it reads as assertion.',
+      'Attach one piece of evidence to its main claim, or cut the claim.');
   }
   if (per1000(criticals, wc) < 3) {
-    issues.push('The writing is mostly descriptive — ' + criticals + ' evaluative marker' + (criticals === 1 ? '' : 's') + ' in ' + wc + ' words. After each main claim add a sentence that tests it: "However...", "A limitation of this is...", "An alternative reading is...".');
+    add('Critical analysis', '',
+      'Mostly descriptive — ' + criticals + ' evaluative marker' + (criticals === 1 ? '' : 's') + ' in ' + wc + ' words.',
+      'After each main claim add a testing sentence: "However...", "A limitation of this is..."');
   }
   if (examples === 0 && dataPoints === 0) {
-    issues.push('No concrete examples or figures. Attach a specific case, statistic or named instance to each major point — abstract claims read as opinion.');
+    add('Evidence', '',
+      'No concrete examples or figures — the claims read as opinion.',
+      'Follow each key point with a specific case, statistic or named instance.');
   } else if (per1000(examples, wc) < 2) {
-    issues.push('Examples are sparse (' + examples + ' in ' + wc + ' words). Follow the claim → example → what it proves pattern on your key points.');
-  }
-  if (theory === 0) {
-    issues.push('No course theory or named framework appears. Name the model, define it in a line, then apply it to your specific case — that application is what earns marks.');
+    add('Evidence', '',
+      'Examples are sparse — ' + examples + ' in ' + wc + ' words.',
+      'Use claim, then example, then one line on what the example proves.');
   }
   if (!hasConclusion) {
-    issues.push('There is no clear conclusion — the text stops rather than closing. End by restating your argument and answering the question directly.' + (closePara ? ' It currently ends: "' + trimQuote(closePara, 110) + '"' : ''));
+    add('Conclusion', closePara ? trimQuote(closePara, 110) : '',
+      'The text stops rather than closing.',
+      'End by restating your argument and answering the question directly.');
   }
-  if (longestLen > 45) {
-    issues.push('Your longest sentence runs ' + longestLen + ' words. Split it: "' + trimQuote(longest, 130) + '"');
+  if (longestLen > 45 && longest) {
+    add('Sentence length', trimQuote(longest, 120),
+      'This sentence runs ' + longestLen + ' words.',
+      'Split it at the first natural break — one idea per sentence.');
   } else if (avgSentLen > 28) {
-    issues.push('Sentences average ' + avgSentLen + ' words — dense. Breaking the longest ones in two is the fastest readability gain here.');
+    add('Clarity', '',
+      'Sentences average ' + avgSentLen + ' words, which reads dense.',
+      'Break the longest sentences in two — the fastest readability gain here.');
   }
-  if (overlong) issues.push('Paragraph ' + overlong + ' is over 220 words. One idea per paragraph — split it where the second idea starts.');
+  if (overlong) {
+    add('Paragraph ' + overlong, '',
+      'This paragraph runs over 220 words.',
+      'Split it where the second idea starts — one idea per paragraph.');
+  }
   if (repeat.word && repeat.count >= 6 && per1000(repeat.count, wc) > 8) {
-    issues.push('"' + repeat.word + '" appears ' + repeat.count + ' times. Either it is your core concept and needs defining once properly, or the argument is circling — vary it and push the point forward.');
+    add('Repetition', repeat.word,
+      '"' + repeat.word + '" appears ' + repeat.count + ' times.',
+      'Define it once properly, then vary the wording and push the argument forward.');
   }
-  if (per1000(vague, wc) > 8) issues.push('Vague qualifiers ("very", "a lot of", "things", "good") appear ' + vague + ' times. Replace each with the specific quantity, source or effect.');
-  if (informal > 0) issues.push('Informal phrasing appears ' + informal + ' time' + (informal === 1 ? '' : 's') + ' ("I think", "in my opinion", "obviously"). Academic writing asserts through evidence, not through stated belief.');
-  if (spread < 4 && sc > 8) issues.push('Sentence lengths barely vary (all near ' + avgSentLen + ' words), which reads flat. Mix short declarative sentences with longer analytical ones.');
-
-  // ── Assemble ────────────────────────────────
-  // Deliberately just the fixes and the grade. Word counts, per-dimension
-  // scores and a strengths list read as a report card rather than advice,
-  // and they pushed the actionable part out of view.
-  var out = 'Areas for Improvement\n';
-  out += issues.length
-    ? '• ' + issues.slice(0, 6).join('\n• ')
-    : '• No structural weaknesses stood out. Focus your next pass on sharpening the argument itself rather than the mechanics.';
+  if (per1000(vague, wc) > 8) {
+    add('Word choice', '',
+      'Vague qualifiers ("very", "a lot of", "things") appear ' + vague + ' times.',
+      'Replace each with the specific quantity, source or effect.');
+  }
+  if (informal > 0) {
+    add('Register', '',
+      'Informal phrasing appears ' + informal + ' time' + (informal === 1 ? '' : 's') + ' ("I think", "in my opinion").',
+      'Assert through evidence instead of stating belief.');
+  }
+  if (wc < 300) {
+    add('Length', '',
+      'At ' + wc + ' words this is short for a full assignment.',
+      'Check the brief — under-length usually means missing evidence, not missing filler.');
+  }
 
   var weakest = dims.slice().sort(function(a, b){ return (a.points / a.weight) - (b.points / b.weight); })[0];
   var weak = weakest.name.charAt(0).toLowerCase() + weakest.name.slice(1);
   var verdict = score >= 80
     ? 'Strong work — ' + weak + ' is the one area still holding it back.'
     : score >= 65
-      ? 'A solid foundation. The biggest single gain available is in ' + weak + '.'
+      ? 'Solid foundation. The biggest single gain is in ' + weak + '.'
       : score >= 45
-        ? 'The argument is there but under-supported. Fix ' + weak + ' first — it is costing the most marks.'
-        : 'This needs substantial work before submission, starting with ' + weak + '.';
-  if (capped) {
-    verdict += ' At ' + wc + ' words there is also not enough of it to demonstrate sustained argument.';
-  }
+        ? 'Under-supported. Fix ' + weak + ' first — it costs the most marks.'
+        : 'Needs substantial work, starting with ' + weak + '.';
+  if (capped) verdict += ' At ' + wc + ' words there is also too little to judge sustained argument.';
 
-  out += '\n\nEstimated Grade\n' + score + '/100 — ' + verdict;
+  var out = 'GRADE: ' + score + '/100\nVERDICT: ' + verdict + '\n';
+  if (!found.length) {
+    out += '\n[SECTION] Overall\n[QUOTE] (not present)\n[ISSUE] No structural weaknesses stood out in this pass.\n[FIX] Focus your next revision on sharpening the argument itself rather than the mechanics.\n';
+  }
+  found.slice(0, 5).forEach(function(f) {
+    out += '\n[SECTION] ' + f.section + '\n[QUOTE] ' + f.quote + '\n[ISSUE] ' + f.issue + '\n[FIX] ' + f.fix + '\n';
+  });
   return out;
 }
 
@@ -1907,7 +2010,7 @@ async function handleUpload(inp) {
     addTyping('f-chat');
     var result = await getAiAssignmentFeedback(read.text);
     rmTyping('f-chat');
-    addBot('f-chat', formatReport(result));
+    addFeedbackReply('f-chat', result);
     lastFeedback = result;
     document.getElementById('f-dlbtn').style.display = 'flex';
   } catch(e) {
@@ -1967,10 +2070,27 @@ async function reviewPortfolio(prompt) {
   }
 }
 
+// The tagged format is for the on-screen cards; the download is for humans
+// and their mentors, so it is flattened back to plain prose.
+function feedbackAsPlainText(text) {
+  var r = parseFeedbackReport(text);
+  if (!r) return text;
+  var out = 'MENTORSYNC — ASSIGNMENT FEEDBACK\n\n';
+  if (r.grade) out += 'Estimated Grade: ' + r.grade + '/100\n' + (r.verdict ? r.verdict + '\n' : '');
+  out += '\nAreas for Improvement\n';
+  r.blocks.forEach(function(b, i) {
+    out += '\n' + (i + 1) + '. ' + (b.section || 'Finding') + '\n';
+    if (b.quote && !/^\(?\s*not present\s*\)?$/i.test(b.quote)) out += '   Your text: "' + b.quote + '"\n';
+    if (b.issue) out += '   Issue: ' + b.issue + '\n';
+    if (b.fix) out += '   Fix: ' + b.fix + '\n';
+  });
+  return out;
+}
+
 function doDownload() {
   if (!lastFeedback) return;
   var a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([lastFeedback], {type:'text/plain'}));
+  a.href = URL.createObjectURL(new Blob([feedbackAsPlainText(lastFeedback)], {type:'text/plain'}));
   a.download = 'MentorSync_Feedback.txt'; a.click();
 }
 
@@ -2104,7 +2224,7 @@ function sendFeedback() {
   if (looksLikeSubmission) {
     getAiAssignmentFeedback(q).then(function(result) {
       rmTyping('f-chat');
-      addBot('f-chat', formatReport(result));
+      addFeedbackReply('f-chat', result);
       lastFeedback = result;
       document.getElementById('f-dlbtn').style.display = 'flex';
     });
@@ -2229,6 +2349,61 @@ var portfolioChatHistory = [];
 function escapeHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
+// Parses the tagged feedback format into cards. Returns null if the reply
+// isn't in that format, so any other shape still renders as plain text.
+function parseFeedbackReport(text) {
+  if (!text || text.indexOf('[SECTION]') === -1) return null;
+
+  var grade = (text.match(/GRADE:\s*([0-9]{1,3})\s*\/\s*100/i) || [])[1];
+  var verdict = (text.match(/VERDICT:\s*([^\n]+)/i) || [])[1] || '';
+
+  var blocks = [];
+  var re = /\[SECTION\]\s*([^\n]*)\n?([\s\S]*?)(?=\[SECTION\]|$)/g;
+  var m;
+  while ((m = re.exec(text)) !== null) {
+    var body = m[2] || '';
+    var field = function(tag) {
+      var hit = body.match(new RegExp('\\[' + tag + '\\]\\s*([\\s\\S]*?)(?=\\n\\s*\\[[A-Z]+\\]|$)'));
+      return hit ? hit[1].replace(/\s+/g, ' ').trim() : '';
+    };
+    var block = {
+      section: (m[1] || '').trim(),
+      quote: field('QUOTE'),
+      issue: field('ISSUE'),
+      fix: field('FIX')
+    };
+    if (block.issue || block.fix) blocks.push(block);
+  }
+  if (!blocks.length) return null;
+  return { grade: grade, verdict: verdict.trim(), blocks: blocks };
+}
+
+function renderFeedbackReport(report) {
+  var html = '';
+  if (report.grade) {
+    html += '<div class="fb-grade"><div class="fb-grade-num">' + escapeHtml(report.grade) +
+            '<small>/100</small></div><div class="fb-grade-txt">' +
+            escapeHtml(report.verdict) + '</div></div>';
+  }
+  report.blocks.forEach(function(b) {
+    html += '<div class="fb-card">';
+    if (b.section) html += '<div class="fb-sec">' + escapeHtml(b.section) + '</div>';
+    if (b.quote) {
+      var absent = /^\(?\s*(not present|none|n\/a|absent)\s*\)?\.?$/i.test(b.quote);
+      html += '<div class="fb-quote' + (absent ? ' absent' : '') + '">' +
+              (absent ? 'Not present in your submission' : '&ldquo;' + escapeHtml(b.quote) + '&rdquo;') + '</div>';
+    }
+    if (b.issue) html += '<div class="fb-issue">' + inlineBold(b.issue) + '</div>';
+    if (b.fix) html += '<div class="fb-fix">' + inlineBold(b.fix) + '</div>';
+    html += '</div>';
+  });
+  return html;
+}
+
+function inlineBold(s) {
+  return escapeHtml(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
+
 // Plain-text report (e.g. the assignment feedback) → safe HTML.
 function formatReport(text) {
   var safe = escapeHtml(text);
