@@ -958,12 +958,12 @@ footer span { color: #fff; font-weight: 600; }
           <div class="card-badge">Apply</div>
         </div>
         <div class="card-body">
-          <div class="card-title">Placement Eligibility Appeal</div>
-          <div class="card-desc">Confirm your criteria, attach proof, and check your eligibility score.</div>
+          <div class="card-title">Placement Index</div>
+          <div class="card-desc">Confirm your criteria, attach proof, and check your placement index score.</div>
           <div class="card-feats">
             <div class="card-feat"><div class="feat-dot">✓</div>All assignments graded above 75</div>
-            <div class="card-feat"><div class="feat-dot">✓</div>Capstone / portfolio submitted</div>
-            <div class="card-feat"><div class="feat-dot">✓</div>Task / practical input completed</div>
+            <div class="card-feat"><div class="feat-dot">✓</div>Consistent performance (avg marks)</div>
+            <div class="card-feat"><div class="feat-dot">✓</div>Mock interview drill completed</div>
           </div>
           <button class="card-btn">Start Appeal →</button>
         </div>
@@ -1244,7 +1244,7 @@ footer span { color: #fff; font-weight: 600; }
   </div>
   <div class="pv-head">
     <button class="pv-back" onclick="closePage('eligibility')">←</button>
-    <div class="pv-title">🎓 Placement Eligibility Appeal</div>
+    <div class="pv-title">🎓 Placement Index</div>
     <div class="pv-home" onclick="closePage('eligibility')">
       <svg width="20" height="24" viewBox="0 0 120 140" fill="none"><line x1="60" y1="8" x2="60" y2="22" stroke='#C9A84C' stroke-width="3" stroke-linecap="round"/><circle cx="60" cy="5" r="4" fill="rgba(255,255,255,0.6)"/><rect x="24" y="22" width="72" height="52" rx="14" fill="white" opacity="0.9"/><circle cx="44" cy="42" r="8" fill="#1B2E6B"/><circle cx="76" cy="42" r="8" fill="#1B2E6B"/><circle cx="46" cy="40" r="2.5" fill="white"/><circle cx="78" cy="40" r="2.5" fill="white"/><path d="M43 60 Q60 70 77 60" stroke="#1B2E6B" stroke-width="2.5" stroke-linecap="round" fill="none"/><rect x="28" y="80" width="64" height="40" rx="12" fill="white" opacity="0.85"/><rect x="8" y="84" width="16" height="30" rx="8" fill="white" opacity="0.8"/><rect x="96" y="84" width="16" height="30" rx="8" fill="white" opacity="0.8"/></svg>
       <span>Home</span>
@@ -1253,19 +1253,19 @@ footer span { color: #fff; font-weight: 600; }
   <div class="pv-body">
     <div class="info-box">
       <div class="info-box-title">🎓 What this feature does</div>
-      <p>Placement is awarded against defined criteria. Use this to assess your standing and evidence your case <b>before</b> submitting an appeal, so your application goes forward complete.</p>
+      <p>Your Placement Index reflects your standing against defined placement criteria — including how consistently you perform and how interview-ready you are. Use this to assess your standing and evidence your case <b>before</b> submitting an appeal, so your application goes forward complete.</p>
       <ul>
         <li><b>Tick</b> each criterion you've met and <b>attach proof</b> for it.</li>
         <li><b>Enter your average marks</b> — consistently strong grades are a good signal you'll hold up well in interviews too.</li>
         <li><b>Run the mock interview drill</b> before you submit — it counts toward your score.</li>
-        <li><b>Submit</b> to get an eligibility score out of 100 with a breakdown per criterion.</li>
+        <li><b>Submit</b> to get a Placement Index score out of 100 with a breakdown per criterion.</li>
         <li><b>Anything unmet</b> shows up in the report — fix those, then re-submit.</li>
       </ul>
       <span class="info-note">📌 Your result is logged in the admin dashboard for the Talent Acquisition team to review.</span>
     </div>
     <!-- CAPTURE -->
     <div id="e-capture" class="capture-screen">
-      <div class="capture-title">👋 Welcome to Placement Eligibility Appeal</div>
+      <div class="capture-title">👋 Welcome to the Placement Index</div>
       <div class="capture-sub">Please enter your details first. This helps us track your placement interest and eligibility status.</div>
       <div class="form-grp"><label>School Email ID</label><input type="text" inputmode="email" autocapitalize="off" id="e-email" placeholder="yourname@educlaas.com"></div>
       <div class="form-grp"><label>Your Full Name</label><input type="text" id="e-name-inp" placeholder="e.g. Li Wei"></div>
@@ -1350,7 +1350,7 @@ footer span { color: #fff; font-weight: 600; }
     <!-- RESULT -->
     <div class="elig-result" id="elig-result">
       <div class="score-card">
-        <div class="score-title">🎓 Placement Eligibility Score</div>
+        <div class="score-title">🎓 Placement Index Score</div>
         <div class="score-circle-wrap">
           <div style="position:relative;width:140px;height:140px;">
             <svg viewBox="0 0 140 140" style="width:140px;height:140px;transform:rotate(-90deg)">
@@ -1368,7 +1368,7 @@ footer span { color: #fff; font-weight: 600; }
         <div class="score-detail" id="sc-detail"></div>
       </div>
       <div class="kpi-report">
-        <div class="kpi-report-head"><div class="kpi-report-title">📊 Placement Eligibility Report</div></div>
+        <div class="kpi-report-head"><div class="kpi-report-title">📊 Placement Index Report</div></div>
         <div class="tbl-wrap">
           <table class="kpi-tbl">
             <thead><tr><th>KPI Criteria</th><th>Status</th><th>Score</th></tr></thead>
@@ -1626,7 +1626,7 @@ function startEligibility() {
   currentLearner = {email:email, name:name};
   document.getElementById('e-capture').style.display = 'none';
   document.getElementById('e-main').style.display = 'block';
-  saveLearnerActivity(email, name, 'Placement Eligibility');
+  saveLearnerActivity(email, name, 'Placement Index');
 }
 
 // Reset capture screens when page closes - handled by closePage()
