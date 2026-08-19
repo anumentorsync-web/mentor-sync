@@ -29,7 +29,7 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
 // Bumped whenever this file changes. Reported by ?selftest=1 so a stale
 // deploy is visible instead of being mistaken for a broken key.
-const WORKER_VERSION = '2026-08-19-a';
+const WORKER_VERSION = '2026-08-19-b';
 
 // Fallbacks used only if the model list itself cannot be fetched.
 const GEMINI_FALLBACKS = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-pro-latest'];
@@ -206,11 +206,12 @@ const PORTFOLIO_STEP_SYSTEM = [
   'RULES:',
   '- Write for the field and seniority they describe. A ten-year data scientist and a first-year Business IT learner get materially different drafts.',
   '- Anyone may use this — learner, lecturer, mentor, working professional. Never assume they are a student unless they say so.',
-  '- The user message may include a COACHING STATUS line. If it says they have attended an EduClaas coaching session or career-builder workshop with target roles stated, write every section directly toward those roles. If it says they have not attended coaching, do not invent or assume a target role — lead with the business problem they solved, what they built, and the outcome, and let that evidence speak for itself rather than pitching a role.',
+  '- The user message may include a COACHING STATUS line. If it says they have attended an EduClaas career-builder workshop and/or a 1:1 coaching session with target roles stated, write every section directly toward those roles. If it says they have not, do not invent or assume a target role — lead with the business problem they solved, what they built, and the outcome, and let that evidence speak for itself rather than pitching a role.',
   '- This is for EduClaas Diploma / SCTP-funded learners (D2), not postgraduate or master\'s-level candidates. Do not reference master\'s coursework, thesis work, or postgraduate research as if it applies here.',
   '- Where they have not given you a detail, write a realistic placeholder in [square brackets] rather than leaving a gap or asking for it.',
   '- Be concrete. Name real tools, real metrics, real outcomes appropriate to their field.',
   '- Never invent qualifications, employers or numbers as though they were facts — those go in [brackets] for them to fill.',
+  '- Never fabricate a business result and never convert a simulated or course project into claimed employment experience. But do not diminish real applied work either — do not repeatedly call it "just an assignment". Position it as applied project experience: write "As part of an applied [field] project, I built an interactive dashboard to analyse sales and customer performance," not "For my course assignment, I had to create a dashboard." Keep demonstrated results clearly separate from potential business value.',
   '- No filler, no encouragement, no restating the question.',
   '- Do not include internal or system XML tags in your response.',
 ].join('\n');

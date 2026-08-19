@@ -1587,7 +1587,7 @@ function startPortfolio() {
   document.getElementById('p-main').style.display = 'block';
   saveLearnerActivity(email, name, 'Portfolio Support');
   portfolioChatHistory = []; // fresh AI conversation for this session
-  pfStep = 0; pfProfile = ''; pfDrafts = {}; pfCoached = null; pfTargetRoles = '';
+  pfStep = 0; pfProfile = ''; pfDrafts = {}; pfCareerBuilder = null; pfCoachingSession = null; pfTargetRoles = '';
   pfTab('guide');
   pfRender();
 }
@@ -2587,13 +2587,32 @@ var PF_STEPS = [
     checkpoint: true
   },
   {
+    id: 'projects',
+    title: 'Applied Project Case Study',
+    why: 'The part that does the persuading — especially if you are reskilling and do not yet have matching work experience. A capstone or course project, written up properly, is real evidence of applied capability. This turns it into a one-page case study you can show an employer.',
+    include: [
+      'Business Challenge — the real problem, customer need or opportunity this addressed, in about 50 words.',
+      'Project Objective — 2-3 concise objectives the project was meant to solve or improve.',
+      'What I Did — 4-6 action-oriented bullets on your actual work (analysed, designed, built, developed, automated, integrated, tested, visualised, evaluated, recommended).',
+      'Solution Created — what you actually produced: a dashboard, model, campaign, workflow, agent, analysis, or recommendation.',
+      'Tools & Methods — the technologies, platforms and methodologies you actually used.',
+      'Key Insights / Outcomes — 2-4 points on findings, demonstrated results, recommendations and potential business value, keeping actual results distinct from potential ones.',
+      'Evidence of Work — 2-3 artefacts worth showing: a screenshot, workflow, campaign flow, visualisation, model result or prototype.',
+      'Capabilities Demonstrated — 4-6 evidence-backed capabilities the project proves.',
+      'Interview Version — a natural 45-60 second spoken explanation: problem, what you did, tools, what you created or found, why it matters.'
+    ],
+    ask: 'Tell me about the project — what it was, the organisation or scenario, whether it was real, simulated or a public dataset, the problem you were addressing, what you personally did, what you built, what you found, and what evidence you have (screenshots, dashboards, code, reports)',
+    placeholder: 'e.g. capstone: retail churn model in Python for a simulated retailer, built a Power BI dashboard, found the top 3 churn drivers',
+    cta: 'Write my case study'
+  },
+  {
     id: 'about',
     title: 'About Me',
-    why: 'Three or four sentences that tell a reader who you are and what you are aiming at, before they scroll.',
+    why: 'Three or four sentences that tell a reader who you are and what you are aiming at, before they scroll. Optional to fill in now — your project case study already does most of the persuading.',
     include: [
       'Who you are and your field, in one sentence.',
       'What you can do — the capability, not the coursework.',
-      'What you are looking for, stated plainly.'
+      'What you are looking for, stated plainly — a role if you already have one in mind, otherwise leave this open.'
     ],
     ask: 'Anything you want mentioned — background, standout work, where you are headed',
     placeholder: 'e.g. career changer from finance, built a churn model that went into production',
@@ -2611,22 +2630,6 @@ var PF_STEPS = [
     ask: 'List the tools and skills you have, roughly',
     placeholder: 'e.g. Python, SQL, Power BI, some Tableau, presenting to stakeholders',
     cta: 'Organise my skills'
-  },
-  {
-    id: 'projects',
-    title: 'Projects',
-    why: 'The part that does the persuading — especially if you are reskilling and do not yet have matching work experience. Course and capstone projects count as real evidence of applied capability. Three to five, strongest first.',
-    include: [
-      'Business Problem — the real issue this addressed, and for whom.',
-      'What I Did — your specific contribution, not the team\'s.',
-      'What I Created — the tangible output: dashboard, model, campaign, app, plan.',
-      'Tools — what you built it with.',
-      'Outcome — the result, with a number wherever one exists.',
-      'Evidence / Capabilities — what this proves you can do, plus a link to the live thing, repo, deck or document.'
-    ],
-    ask: 'Describe your projects — course work and capstones count, rough notes are fine',
-    placeholder: 'e.g. capstone: retail churn model in Python, built a Power BI dashboard for a group project',
-    cta: 'Write up my projects'
   },
   {
     id: 'certs',
@@ -2673,11 +2676,14 @@ var pfStep = 0;
 var pfProfile = '';
 var pfDrafts = {};
 // null = not answered yet, true/false = whether they've done a Talent Team
-// coaching session or career-builder workshop. Someone who has already been
-// coached usually has role clarity; someone who hasn't needs the flow to
-// lean on project evidence instead of a target role they don't have yet.
-var pfCoached = null;
+// career-builder workshop and/or 1:1 coaching session. Someone who has been
+// through either usually has role clarity; someone who hasn't needs the flow
+// to lean on project evidence instead of a target role they don't have yet.
+var pfCareerBuilder = null;
+var pfCoachingSession = null;
 var pfTargetRoles = '';
+function pfCoachedAny() { return pfCareerBuilder === true || pfCoachingSession === true; }
+function pfCoachedAnswered() { return pfCareerBuilder !== null && pfCoachingSession !== null; }
 
 function pfTab(which) {
   ['guide','ask','review'].forEach(function(k) {
@@ -2709,8 +2715,8 @@ function pfRender() {
   html += '<div class="pf-ask">' + escapeHtml(pfAskText(s)) + '</div>';
   html += '<textarea class="txt-in" id="pf-in" rows="2" placeholder="' + escapeHtml(pfPlaceholder(s)) +
           '" oninput="autoGrow(this)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();pfGenerate();}">' +
-          escapeHtml(s.checkpoint && pfCoached === true ? pfTargetRoles : '') + '</textarea>';
-  var awaitingCheckpoint = s.checkpoint && pfCoached === null;
+          escapeHtml(s.checkpoint && pfCoachedAny() ? pfTargetRoles : '') + '</textarea>';
+  var awaitingCheckpoint = s.checkpoint && !pfCoachedAnswered();
   html += '<div class="pf-nav">';
   html += '<button class="pf-btn ghost" onclick="pfBack()"' + (pfStep === 0 ? ' disabled' : '') + '>Back</button>';
   html += '<button class="pf-btn" id="pf-go" onclick="pfGenerate()"' + (awaitingCheckpoint ? ' disabled' : '') + '>' + escapeHtml(s.cta) + '</button>';
@@ -2722,22 +2728,39 @@ function pfRender() {
   if (out) pfShow(out, last);
 }
 
-// Talent-team checkpoint on step 1: someone already coached usually knows
-// their target roles; someone who hasn't been should lean on project
-// evidence instead of a role they haven't settled on yet.
+// Talent-team checkpoint on step 1: someone already through a career-builder
+// workshop and/or a 1:1 coaching session usually knows their target roles;
+// someone who hasn't been should lean on project evidence instead of a role
+// they haven't settled on yet. Asked as two separate questions because a
+// learner can have done either, both, or neither.
 function pfCheckpointHtml() {
-  var y = pfCoached === true ? ' active' : '';
-  var n = pfCoached === false ? ' active' : '';
+  var cy = pfCareerBuilder === true ? ' active' : '';
+  var cn = pfCareerBuilder === false ? ' active' : '';
+  var sy = pfCoachingSession === true ? ' active' : '';
+  var sn = pfCoachingSession === false ? ' active' : '';
   return '<div class="pf-checkpoint">' +
-    '<div class="pf-checkpoint-q">Have you attended an EduClaas career-builder workshop or 1:1 coaching session?</div>' +
+    '<div class="pf-checkpoint-q">Have you attended an EduClaas career-builder workshop?</div>' +
     '<div class="pf-check-btns">' +
-      '<button type="button" class="pf-pill' + y + '" onclick="pfSetCoached(true)">Yes, I have</button>' +
-      '<button type="button" class="pf-pill' + n + '" onclick="pfSetCoached(false)">Not yet</button>' +
+      '<button type="button" class="pf-pill' + cy + '" onclick="pfSetCareerBuilder(true)">Yes, I have</button>' +
+      '<button type="button" class="pf-pill' + cn + '" onclick="pfSetCareerBuilder(false)">Not yet</button>' +
+    '</div>' +
+    '<div class="pf-checkpoint-q" style="margin-top:12px;">Have you attended a 1:1 coaching session?</div>' +
+    '<div class="pf-check-btns">' +
+      '<button type="button" class="pf-pill' + sy + '" onclick="pfSetCoachingSession(true)">Yes, I have</button>' +
+      '<button type="button" class="pf-pill' + sn + '" onclick="pfSetCoachingSession(false)">Not yet</button>' +
     '</div></div>';
 }
 
-function pfSetCoached(val) {
-  pfCoached = val;
+function pfSetCareerBuilder(val) {
+  pfCareerBuilder = val;
+  pfTargetRoles = '';
+  pfRender();
+  var el = document.getElementById('pf-in');
+  if (el) el.focus();
+}
+
+function pfSetCoachingSession(val) {
+  pfCoachingSession = val;
   pfTargetRoles = '';
   pfRender();
   var el = document.getElementById('pf-in');
@@ -2745,12 +2768,12 @@ function pfSetCoached(val) {
 }
 
 function pfAskText(s) {
-  if (s.checkpoint && pfCoached === true) return 'Which roles did that session help you target?';
+  if (s.checkpoint && pfCoachedAny()) return 'Which roles did that help you target?';
   return s.ask;
 }
 function pfPlaceholder(s) {
-  if (s.checkpoint && pfCoached === true) return 'e.g. Data Analyst, Marketing Executive roles';
-  if (s.checkpoint && pfCoached === false) return 'e.g. Data Science learner, final year — role still open, focusing on my project evidence';
+  if (s.checkpoint && pfCoachedAny()) return 'e.g. Data Analyst, Marketing Executive roles';
+  if (s.checkpoint && pfCoachedAnswered()) return 'e.g. Data Science learner, final year — role still open, focusing on my project evidence';
   return s.placeholder;
 }
 
@@ -2802,19 +2825,22 @@ async function pfGenerate() {
   var last = pfStep === PF_STEPS.length - 1;
 
   if (s.checkpoint) {
-    if (pfCoached === null) return; // must answer the checkpoint first
+    if (!pfCoachedAnswered()) return; // must answer both checkpoint questions first
     if (!said) { el.focus(); return; }
-    if (pfCoached === true) pfTargetRoles = said;
+    if (pfCoachedAny()) pfTargetRoles = said;
     pfProfile = said;
   }
 
   btn.disabled = true;
   btn.textContent = 'Working…';
 
-  var coachLine = pfCoached === true
-    ? 'COACHING STATUS: Has attended an EduClaas coaching session / career-builder workshop. Target roles: ' + (pfTargetRoles || 'stated above') + '. Write toward those roles directly.'
-    : pfCoached === false
-      ? 'COACHING STATUS: Has not yet attended coaching. No fixed target role — do not invent one. Lead with applied project evidence (business problem solved, what they built, outcome) rather than a role-specific pitch.'
+  var coachedBits = [];
+  if (pfCareerBuilder === true) coachedBits.push('career-builder workshop');
+  if (pfCoachingSession === true) coachedBits.push('1:1 coaching session');
+  var coachLine = pfCoachedAny()
+    ? 'COACHING STATUS: Has attended an EduClaas ' + coachedBits.join(' and ') + '. Target roles: ' + (pfTargetRoles || 'stated above') + '. Write toward those roles directly.'
+    : pfCoachedAnswered()
+      ? 'COACHING STATUS: Has not yet attended a career-builder workshop or coaching session. No fixed target role — do not invent one. Lead with applied project evidence (business problem solved, what they built, outcome) rather than a role-specific pitch.'
       : 'COACHING STATUS: not stated';
 
   var prompt =
@@ -2843,15 +2869,15 @@ async function pfGenerate() {
 function pfOffline(s, said) {
   var who = pfProfile || said || '[your field]';
   var T = {
-    profile: 'DRAFT:\nAngle set: ' + who + '\n' + (pfCoached === true
-      ? 'Target roles from your coaching session: ' + (pfTargetRoles || who) + '\n'
-      : pfCoached === false
+    profile: 'DRAFT:\nAngle set: ' + who + '\n' + (pfCoachedAny()
+      ? 'Target roles from your workshop/coaching: ' + (pfTargetRoles || who) + '\n'
+      : pfCoachedAnswered()
         ? 'No fixed target role yet — the following steps will lead with your project evidence instead.\n'
         : '') +
       '\nEvery following section will be written for this reader.\n\nNOTES:\n• Keep this in mind at each step — if a line does not serve this reader, cut it.',
     about: 'DRAFT:\nI am a [role] working in [field], focused on [the specific thing you do].\n\nI have [X years / the length of your programme] of experience with [your two or three strongest tools or methods], and my recent work covers [project area].\n\nI am currently looking for [role or opportunity] where I can [the value you bring].\n\nNOTES:\n• Replace every bracket with something specific — vague beats nothing, specific beats vague.\n• Lead with capability, not with coursework.\n• Three to four sentences is the right length. Cut anything beyond that.',
     skills: 'DRAFT:\nTechnical\n• [Tool or language] — [proficient / working knowledge]\n• [Tool or language] — [level]\n• [Tool or language] — [level]\n\nProfessional\n• [Skill you can evidence in a project below]\n• [Skill you can evidence in a project below]\n\nNOTES:\n• Only list a soft skill if a project below proves it.\n• Order technical skills by how central they are to the roles you want.',
-    projects: 'DRAFT:\n[Project name]\nBusiness Problem: [what needed solving, and for whom]\nWhat I Did: [your specific contribution]\nWhat I Created: [the tangible output — dashboard, model, campaign, app]\nTools: [what you built it with]\nOutcome: [result, with a number where one exists]\nEvidence / Capabilities: [what this proves you can do] — [link to the live thing, repo, deck or document]\n\n[Repeat this block for each project — three to five, strongest first]\n\nNOTES:\n• Strongest project first. Most readers stop after the first one.\n• Course and capstone projects count as real evidence — you do not need paid work experience to have a strong project here.\n• Every project needs a link. A described project is a claim; a linked one is evidence.',
+    projects: 'DRAFT:\n[Project Title]\nApplied Project | [Capability Area]\n\nBusiness Challenge\n[The realistic business problem, customer need or opportunity this addressed, in about 50 words]\n\nProject Objective\n• [Objective 1]\n• [Objective 2]\n\nWhat I Did\n• [Action-oriented bullet — Analysed / Designed / Built / Developed / Automated / Integrated / Tested / Visualised / Evaluated / Recommended]\n• [Bullet]\n• [Bullet]\n\nSolution Created\n[What you actually produced — dashboard, model, campaign, workflow, agent, analysis or recommendation]\n\nTools & Methods\n[Technologies, platforms and methodologies actually used]\n\nKey Insights / Outcomes\n• [Finding or demonstrated result]\n• [Recommendation or potential business value]\n\nEvidence of Work\n• [Artefact — screenshot, workflow, campaign flow, visualisation, model result, prototype]\n\nCapabilities Demonstrated\n• [Capability 1] • [Capability 2] • [Capability 3] • [Capability 4]\n\nHow I Would Explain This Project in an Interview\n[A natural 45-60 second explanation: problem → what I did → tools → what I created/found → why it matters]\n\nNOTES:\n• This is applied project experience, not "just an assignment" — write it that way. Say "As part of an applied [field] project, I built..." not "For my course assignment, I had to...".\n• Never state a result you did not actually get — keep potential business value clearly separate from demonstrated results.\n• Course and capstone projects count as real evidence — you do not need paid work experience to have a strong case study here.\n• Add a link to the live thing, repo, deck or document wherever you can — a described project is a claim, a linked one is evidence.',
     certs: 'DRAFT:\n• [Credential name] — [issuing body], [month year]\n• [Credential name] — [issuing body], [month year]\n\nNOTES:\n• Full names, no abbreviations a reader outside your field would not know.\n• Add a verification link where the issuer provides one.\n• Newest first.',
     contact: 'DRAFT:\nEmail: [your professional email]\nLinkedIn: [your profile URL]\n[GitHub / Kaggle / Behance / booking link, if relevant to your field]\n\nNOTES:\n• Put this where it is visible without scrolling, and again at the foot of the page.\n• Make sure your LinkedIn headline says the same thing this portfolio says.',
     build: 'DRAFT:\nIf you want it live today: use Carrd.\n1. Go to carrd.co and sign up — the free tier covers up to 3 sites.\n2. Pick a one-page template.\n3. Paste each section you drafted into the matching block.\n4. Publish. You get a shareable link immediately.\n\nIf you have a couple of hours and want it more designed: use Framer.\n1. Go to framer.com and sign up.\n2. Start from a portfolio template.\n3. Give each section from these steps its own block or page.\n4. Publish.\n\nNOTES:\n• Publish something today and refine it later — an unfinished live portfolio beats a perfect unpublished one.\n• Once it is live, come back to the "Review mine" tab and paste the link for an audit.'
