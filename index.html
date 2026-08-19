@@ -1256,6 +1256,8 @@ footer span { color: #fff; font-weight: 600; }
       <p>Placement is awarded against defined criteria. Use this to assess your standing and evidence your case <b>before</b> submitting an appeal, so your application goes forward complete.</p>
       <ul>
         <li><b>Tick</b> each criterion you've met and <b>attach proof</b> for it.</li>
+        <li><b>Enter your average marks</b> — consistently strong grades are a good signal you'll hold up well in interviews too.</li>
+        <li><b>Run the mock interview drill</b> before you submit — it counts toward your score.</li>
         <li><b>Submit</b> to get an eligibility score out of 100 with a breakdown per criterion.</li>
         <li><b>Anything unmet</b> shows up in the report — fix those, then re-submit.</li>
       </ul>
@@ -1313,6 +1315,31 @@ footer span { color: #fff; font-weight: 600; }
               style="display:block;width:100%;font-size:16px;padding:8px;border:2px solid #C9A84C;border-radius:8px;background:#fff;color:#1B2E6B;cursor:pointer;">
             <div id="a3n" style="font-size:12px;color:#1B2E6B;margin-top:4px;font-weight:600;"></div>
           </div>
+        </div>
+      </div>
+
+      <!-- ITEM 4: consistent performance / marks -->
+      <div class="elig-item" id="ei4">
+        <div class="elig-chk" id="ec4">✓</div>
+        <div class="elig-content" style="flex:1;">
+          <div class="elig-label">Consistent performance — average assignment score across the programme</div>
+          <div style="margin-top:12px;">
+            <p style="font-size:13px;color:#5A6A9B;margin-bottom:6px;">Enter your average score (0–100). Someone who performs consistently well tends to hold up well in interviews too.</p>
+            <input type="number" min="0" max="100" id="marks-avg" placeholder="e.g. 82" oninput="onMarksInput()"
+              style="width:100%;font-size:16px;padding:10px;border:2px solid #C9A84C;border-radius:8px;background:#fff;color:#1B2E6B;">
+          </div>
+        </div>
+      </div>
+
+      <!-- ITEM 5: mock interview drill -->
+      <div class="elig-item" id="ei5">
+        <div class="elig-chk" id="ec5">✓</div>
+        <div class="elig-content" style="flex:1;">
+          <div class="elig-label">Mock Interview Questions Drill completed</div>
+          <p style="font-size:13px;color:#5A6A9B;margin:8px 0;">Practising out loud is what actually builds interview confidence. Run a short drill of real interview questions before you submit.</p>
+          <button type="button" class="capture-btn" style="width:auto;padding:10px 18px;font-size:14px;" onclick="startMockDrill()">🎤 Start Mock Interview Drill</button>
+          <div id="mi-drill-panel" style="display:none;"></div>
+          <div id="mi-drill-status" style="font-size:12px;color:#1B2E6B;margin-top:8px;font-weight:600;"></div>
         </div>
       </div>
 
@@ -2975,20 +3002,139 @@ function toggleEligItem(n) {
 }
 
 function showAttach(inp, id) { if(inp.files[0]) document.getElementById(id).textContent = inp.files[0].name; }
+
+// ── Item 4: consistent performance (average marks) ──
+function onMarksInput() {
+  var v = parseFloat(document.getElementById('marks-avg').value);
+  var chk = document.getElementById('ec4');
+  var item = document.getElementById('ei4');
+  if (!item || !chk) return;
+  if (!isNaN(v) && v > 0) { item.classList.add('checked'); chk.style.background='#1B2E6B'; chk.style.borderColor='#1B2E6B'; chk.style.color='#fff'; }
+  else { item.classList.remove('checked'); chk.style.background=''; chk.style.borderColor=''; chk.style.color='transparent'; }
+}
+
+// ── Item 5: mock interview drill ──
+// Offline, rule-based tips — this needs to work with no AI backend so it
+// never blocks a submission. Correctness matters more here than realism.
+var MI_QUESTIONS = [
+  { q: 'Tell me about yourself and why you are interested in this role.', tip: 'Keep it under 60 seconds: your field, one standout project, and what you are looking for next.' },
+  { q: 'Walk me through a project you are proud of.', tip: 'Structure it as: the problem, what you did, the tools, the outcome — this is exactly your Applied Project Case Study, so reuse it.' },
+  { q: 'Describe a time you solved a difficult problem.', tip: 'Use STAR — Situation, Task, Action, Result — and be specific about your own contribution, not the team\'s.' },
+  { q: 'Why should we hire you over another candidate?', tip: 'Name 2-3 concrete capabilities backed by evidence from your projects, not adjectives with nothing behind them.' },
+  { q: 'Where do you see yourself in 3-5 years?', tip: 'Tie your answer to the role you are applying for, not a generic career ladder.' },
+  { q: 'What is your biggest weakness?', tip: 'Pick something real and specific, then say what you are actively doing about it. Avoid fake weaknesses like "I work too hard".' },
+  { q: 'How do you handle tight deadlines or pressure?', tip: 'Give one concrete example with a specific action you took, not a general philosophy.' },
+  { q: 'What do you know about our company or industry?', tip: 'Research the employer beforehand and name something specific about them, not generic industry facts.' },
+  { q: 'Do you have any questions for us?', tip: 'Always have 2-3 ready — about the team, the first 90 days in the role, or how success is measured.' }
+];
+var miPicked = [];
+var miIdx = 0;
+var miAnswered = 0;
+var miDrillDone = false;
+
+function pickMockQuestions(n) {
+  var pool = MI_QUESTIONS.slice();
+  for (var i = pool.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = pool[i]; pool[i] = pool[j]; pool[j] = t;
+  }
+  return pool.slice(0, n);
+}
+
+function startMockDrill() {
+  miPicked = pickMockQuestions(5);
+  miIdx = 0; miAnswered = 0;
+  document.getElementById('mi-drill-status').textContent = '';
+  renderMockDrill();
+}
+
+function renderMockDrill() {
+  var panel = document.getElementById('mi-drill-panel');
+  if (!panel) return;
+  panel.style.display = 'block';
+  panel.dataset.phase = 'answer';
+  var q = miPicked[miIdx];
+  panel.innerHTML =
+    '<div style="background:#F7F9FD;border:1.5px solid rgba(26,46,107,0.14);border-radius:10px;padding:14px;margin-top:10px;">' +
+    '<div style="font-size:12px;color:#5A6A9B;font-weight:700;margin-bottom:6px;">Question ' + (miIdx + 1) + ' of ' + miPicked.length + '</div>' +
+    '<div style="font-size:14px;font-weight:600;color:#1B2E6B;margin-bottom:10px;">' + escapeHtml(q.q) + '</div>' +
+    '<textarea id="mi-answer" rows="3" placeholder="Say it out loud, or type your key points here" ' +
+    'style="width:100%;font-size:15px;padding:10px;border:2px solid rgba(26,46,107,0.2);border-radius:8px;font-family:inherit;"></textarea>' +
+    '<button type="button" class="capture-btn" style="width:auto;padding:9px 16px;font-size:13px;margin-top:10px;" onclick="mockDrillAdvance()">Show tip</button>' +
+    '<div id="mi-tip" style="display:none;background:#fff;border-left:3px solid #C9A84C;padding:10px 12px;margin-top:10px;font-size:13px;color:#1B2E6B;"></div>' +
+    '</div>';
+}
+
+function mockDrillAdvance() {
+  var panel = document.getElementById('mi-drill-panel');
+  if (!panel) return;
+  var btn = panel.querySelector('button');
+  if (panel.dataset.phase === 'answer') {
+    var ta = document.getElementById('mi-answer');
+    if (ta && ta.value.trim()) miAnswered++;
+    var tip = document.getElementById('mi-tip');
+    tip.style.display = 'block';
+    tip.innerHTML = '<b>What a strong answer covers:</b> ' + escapeHtml(miPicked[miIdx].tip);
+    panel.dataset.phase = 'tip';
+    if (btn) btn.textContent = miIdx === miPicked.length - 1 ? 'Finish drill' : 'Next question →';
+  } else if (miIdx < miPicked.length - 1) {
+    miIdx++;
+    renderMockDrill();
+  } else {
+    finishMockDrill();
+  }
+}
+
+function finishMockDrill() {
+  var panel = document.getElementById('mi-drill-panel');
+  if (panel) panel.innerHTML =
+    '<div style="background:#F7F9FD;border:1.5px solid rgba(26,46,107,0.14);border-radius:10px;padding:14px;margin-top:10px;font-size:13px;color:#1B2E6B;">' +
+    '✅ Drill complete — ' + miAnswered + ' of ' + miPicked.length + ' answered. Run it again any time before your real interview.</div>';
+  miDrillDone = true;
+  var item = document.getElementById('ei5'); if (item) item.classList.add('checked');
+  var chk = document.getElementById('ec5');
+  if (chk) { chk.style.background='#1B2E6B'; chk.style.borderColor='#1B2E6B'; chk.style.color='#fff'; }
+  var status = document.getElementById('mi-drill-status');
+  if (status) status.textContent = 'Completed — counted toward your eligibility score.';
+}
+
 function submitElig() {
-  var items = [document.getElementById('ei1'), document.getElementById('ei2'), document.getElementById('ei3')].filter(Boolean);
-  var kpis = [{label:'Assignments graded above 75', weight:40},{label:'Capstone / portfolio submitted', weight:35},{label:'Task / practical input completed', weight:25}];
+  var kpis = [
+    { label: 'Assignments graded above 75', weight: 25, elId: 'ei1', fileId: 'a1n' },
+    { label: 'Capstone / portfolio submitted', weight: 20, elId: 'ei2', fileId: 'a2n' },
+    { label: 'Task / practical input completed', weight: 15, elId: 'ei3', fileId: 'a3n' }
+  ];
   var total = 0; var rows = '';
-  items.forEach(function(item, i) {
-    var checked = item.classList.contains('checked');
-    var attName = item.querySelector('[id^="a"][id$="n"]');
+  kpis.forEach(function(k) {
+    var item = document.getElementById(k.elId);
+    var checked = item && item.classList.contains('checked');
+    var attName = document.getElementById(k.fileId);
     var hasFile = attName && attName.textContent.trim() !== '';
-    var pts = checked ? (hasFile ? kpis[i].weight : Math.round(kpis[i].weight * 0.6)) : 0;
+    var pts = checked ? (hasFile ? k.weight : Math.round(k.weight * 0.6)) : 0;
     total += pts;
     var status = checked && hasFile ? '✅ Complete' : checked ? '⚠️ No document' : '❌ Not done';
     var sc = checked && hasFile ? '#16a34a' : checked ? '#d97706' : '#dc2626';
-    rows += '<tr><td>' + kpis[i].label + '</td><td style="color:'+sc+';font-weight:600;">' + status + '</td><td style="font-weight:700;color:#E03070;">' + pts + '/' + kpis[i].weight + '</td></tr>';
+    rows += '<tr><td>' + k.label + '</td><td style="color:'+sc+';font-weight:600;">' + status + '</td><td style="font-weight:700;color:#E03070;">' + pts + '/' + k.weight + '</td></tr>';
   });
+
+  // Consistent performance — average marks, scaled rather than a flat tick.
+  var marksWeight = 20;
+  var marksInp = document.getElementById('marks-avg');
+  var marksVal = marksInp ? parseFloat(marksInp.value) : NaN;
+  if (isNaN(marksVal)) marksVal = 0;
+  marksVal = Math.max(0, Math.min(100, marksVal));
+  var marksPts = Math.round(marksWeight * marksVal / 100);
+  total += marksPts;
+  var marksStatus = marksVal >= 75 ? '✅ Strong & consistent' : marksVal > 0 ? '⚠️ Below target' : '❌ Not entered';
+  var marksColor = marksVal >= 75 ? '#16a34a' : marksVal > 0 ? '#d97706' : '#dc2626';
+  rows += '<tr><td>Consistent performance (avg marks: ' + (marksVal || '—') + ')</td><td style="color:'+marksColor+';font-weight:600;">' + marksStatus + '</td><td style="font-weight:700;color:#E03070;">' + marksPts + '/' + marksWeight + '</td></tr>';
+
+  // Mock interview drill.
+  var drillWeight = 20;
+  var drillPts = miDrillDone ? drillWeight : 0;
+  total += drillPts;
+  rows += '<tr><td>Mock interview drill completed</td><td style="color:'+(miDrillDone ? '#16a34a' : '#dc2626')+';font-weight:600;">' + (miDrillDone ? '✅ Complete' : '❌ Not done') + '</td><td style="font-weight:700;color:#E03070;">' + drillPts + '/' + drillWeight + '</td></tr>';
+
   rows += '<tr style="background:rgba(224,48,112,0.05);"><td style="font-weight:700;">Total Score</td><td></td><td style="font-size:16px;font-weight:700;color:#E03070;">' + total + '/100</td></tr>';
   document.getElementById('kpi-rows').innerHTML = rows;
   document.getElementById('sc-num').textContent = total;
