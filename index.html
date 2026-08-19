@@ -189,6 +189,10 @@ a { color: var(--navy); }
 .usage-body.open { display: block; }
 
 /* FILTERS */
+.cstat-row { display: flex; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+.cstat { background: var(--bg-light); border: 2px solid rgba(201,168,76,0.2); border-radius: 12px; padding: 12px 14px; flex: 1; min-width: 120px; text-align: center; }
+.cstat-num { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; color: var(--navy); }
+.cstat-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; line-height: 1.3; }
 .filters { display: flex; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
 .filter-box { background: var(--bg-light); border: 2px solid rgba(201,168,76,0.2); border-radius: 12px; padding: 12px 14px; flex: 1; min-width: 150px; }
 .filter-title { font-size: 11px; font-weight: 700; color: var(--navy); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1.5px solid var(--border); }
@@ -1003,11 +1007,12 @@ footer span { color: #fff; font-weight: 600; }
             <label class="filter-item"><input type="checkbox" checked class="pf pro" value="LI" onchange="filterTbl()"> LI</label>
           </div>
         </div>
+        <div class="cstat-row" id="coach-stats"></div>
         <div class="tbl-wrap">
           <table id="ltbl">
-            <thead><tr><th>Timestamp</th><th>Email</th><th>Learner Name</th><th>Cohort Code</th><th>Pillar</th><th>Profile</th><th>Task Completion</th><th>Best Performed On</th></tr></thead>
+            <thead><tr><th>Timestamp</th><th>Email</th><th>Learner Name</th><th>Cohort Code</th><th>Pillar</th><th>Profile</th><th>Task Completion</th><th>Best Performed On</th><th>Career-Builder Workshop</th><th>1:1 Coaching Session</th></tr></thead>
             <tbody id="track-tbody">
-              <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px;font-size:13px;">No learner activity yet. Activity will appear here as learners use the app.</td></tr>
+              <tr><td colspan="10" style="text-align:center;color:var(--muted);padding:16px;font-size:13px;">No learner activity yet. Activity will appear here as learners use the app.</td></tr>
             </tbody>
           </table>
         </div>
@@ -1441,31 +1446,77 @@ function saveLearnerActivity(email, name, task) {
     pillar: 'Digital Business',
     profile: 'LA',
     task: task,
-    completion: Math.floor(Math.random() * 30) + 70 + '%'
+    completion: Math.floor(Math.random() * 30) + 70 + '%',
+    // Only meaningful for Portfolio Support: null = checkpoint not reached
+    // yet, true/false once the learner answers.
+    workshop: null,
+    coaching: null
   };
   learnerData.push(entry);
   refreshTrackingTable();
+}
+
+// Records the checkpoint answers against the learner's most recent activity
+// row, keyed by email, so the Talent team can see who has been through a
+// career-builder workshop or coaching session before they look at role fit.
+function updateLearnerCoachStatus(email, careerBuilder, coachingSession) {
+  for (var i = learnerData.length - 1; i >= 0; i--) {
+    if (learnerData[i].email === email && learnerData[i].task === 'Portfolio Support') {
+      learnerData[i].workshop = careerBuilder;
+      learnerData[i].coaching = coachingSession;
+      break;
+    }
+  }
+  refreshTrackingTable();
+}
+
+function yesNoCell(v) {
+  if (v === true) return '<div class="pill good"><div class="pdot"></div>Yes</div>';
+  if (v === false) return '<div class="pill" style="background:rgba(90,106,155,0.12);color:var(--muted);"><div class="pdot" style="background:var(--muted);"></div>Not yet</div>';
+  return '<span style="color:var(--muted);font-size:12px;">—</span>';
 }
 
 function refreshTrackingTable() {
   var tbody = document.getElementById('track-tbody');
   if (!tbody) return;
   if (learnerData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px;font-size:13px;">No learner activity yet. Activity will appear here as learners use the app.</td></tr>';
-    return;
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:16px;font-size:13px;">No learner activity yet. Activity will appear here as learners use the app.</td></tr>';
+  } else {
+    tbody.innerHTML = learnerData.map(function(d) {
+      return '<tr data-pil="'+d.pillar+'" data-pro="'+d.profile+'">' +
+        '<td style="font-size:12px;color:var(--muted);">'+d.timestamp+'</td>' +
+        '<td>'+d.email+'</td>' +
+        '<td style="font-weight:600;">'+d.name+'</td>' +
+        '<td>'+d.cohort+'</td>' +
+        '<td>'+d.pillar+'</td>' +
+        '<td>'+d.profile+'</td>' +
+        '<td><div class="bar"><div class="bar-track"><div class="bar-fill" style="width:'+d.completion+'"></div></div><div class="bar-num">'+d.completion+'</div></div></td>' +
+        '<td><div class="pill good"><div class="pdot"></div>'+d.task+'</div></td>' +
+        '<td>'+(d.task === 'Portfolio Support' ? yesNoCell(d.workshop) : '<span style="color:var(--muted);font-size:12px;">—</span>')+'</td>' +
+        '<td>'+(d.task === 'Portfolio Support' ? yesNoCell(d.coaching) : '<span style="color:var(--muted);font-size:12px;">—</span>')+'</td>' +
+      '</tr>';
+    }).join('');
   }
-  tbody.innerHTML = learnerData.map(function(d) {
-    return '<tr data-pil="'+d.pillar+'" data-pro="'+d.profile+'">' +
-      '<td style="font-size:12px;color:var(--muted);">'+d.timestamp+'</td>' +
-      '<td>'+d.email+'</td>' +
-      '<td style="font-weight:600;">'+d.name+'</td>' +
-      '<td>'+d.cohort+'</td>' +
-      '<td>'+d.pillar+'</td>' +
-      '<td>'+d.profile+'</td>' +
-      '<td><div class="bar"><div class="bar-track"><div class="bar-fill" style="width:'+d.completion+'"></div></div><div class="bar-num">'+d.completion+'</div></div></td>' +
-      '<td><div class="pill good"><div class="pdot"></div>'+d.task+'</div></td>' +
-    '</tr>';
-  }).join('');
+  computeCoachStats();
+}
+
+// Quick-read counts for the Talent team: how many learners have been through
+// a workshop or coaching session, without having to scan the table.
+function computeCoachStats() {
+  var el = document.getElementById('coach-stats');
+  if (!el) return;
+  var pf = learnerData.filter(function(d) { return d.task === 'Portfolio Support'; });
+  var wY = pf.filter(function(d) { return d.workshop === true; }).length;
+  var wN = pf.filter(function(d) { return d.workshop === false; }).length;
+  var cY = pf.filter(function(d) { return d.coaching === true; }).length;
+  var cN = pf.filter(function(d) { return d.coaching === false; }).length;
+  var pending = pf.filter(function(d) { return d.workshop === null; }).length;
+  el.innerHTML =
+    '<div class="cstat"><div class="cstat-num">' + wY + '</div><div class="cstat-lbl">Attended workshop</div></div>' +
+    '<div class="cstat"><div class="cstat-num">' + wN + '</div><div class="cstat-lbl">Not yet — workshop</div></div>' +
+    '<div class="cstat"><div class="cstat-num">' + cY + '</div><div class="cstat-lbl">Attended coaching</div></div>' +
+    '<div class="cstat"><div class="cstat-num">' + cN + '</div><div class="cstat-lbl">Not yet — coaching</div></div>' +
+    '<div class="cstat"><div class="cstat-num">' + pending + '</div><div class="cstat-lbl">Not answered yet</div></div>';
 }
 
 // ── PAGE NAVIGATION ──────────────────────────
@@ -2762,7 +2813,13 @@ function pfCheckpointHtml() {
 
 function pfSetCareerBuilder(val) { pfCareerBuilder = val; pfRender(); }
 function pfSetCoachingSession(val) { pfCoachingSession = val; pfRender(); }
-function pfCheckpointContinue() { if (pfCoachedAnswered()) pfNext(); }
+function pfCheckpointContinue() {
+  if (!pfCoachedAnswered()) return;
+  if (currentLearner && currentLearner.email) {
+    updateLearnerCoachStatus(currentLearner.email, pfCareerBuilder, pfCoachingSession);
+  }
+  pfNext();
+}
 
 function pfBack() { if (pfStep > 0) { pfStep--; pfRender(); } }
 function pfNext() {
