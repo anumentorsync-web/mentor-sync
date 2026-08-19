@@ -431,6 +431,18 @@ footer span { color: #fff; font-weight: 600; }
 .pf-include li:last-child { margin-bottom: 0; }
 
 .pf-ask { font-size: 13px; color: var(--navy); font-weight: 600; margin-bottom: 7px; }
+.pf-checkpoint {
+  background: #F7F9FD; border: 1.5px solid rgba(26,46,107,0.14);
+  border-radius: 10px; padding: 12px 14px; margin-bottom: 14px;
+}
+.pf-checkpoint-q { font-size: 13.5px; color: var(--text); line-height: 1.5; margin-bottom: 10px; font-weight: 600; }
+.pf-check-btns { display: flex; gap: 8px; }
+.pf-pill {
+  flex: 1; padding: 9px 10px; border-radius: 20px; border: 1.5px solid rgba(26,46,107,0.25);
+  background: #fff; color: var(--navy); font-size: 13px; font-weight: 700;
+  cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s;
+}
+.pf-pill.active { background: var(--navy); border-color: var(--navy); color: #fff; }
 .pf-nav { display: flex; gap: 8px; margin-top: 4px; }
 .pf-btn {
   flex: 1; padding: 12px; border-radius: 10px; font-size: 14px; font-weight: 700;
@@ -1575,7 +1587,7 @@ function startPortfolio() {
   document.getElementById('p-main').style.display = 'block';
   saveLearnerActivity(email, name, 'Portfolio Support');
   portfolioChatHistory = []; // fresh AI conversation for this session
-  pfStep = 0; pfProfile = ''; pfDrafts = {};
+  pfStep = 0; pfProfile = ''; pfDrafts = {}; pfCoached = null; pfTargetRoles = '';
   pfTab('guide');
   pfRender();
 }
@@ -2571,7 +2583,8 @@ var PF_STEPS = [
     ],
     ask: 'Tell me who you are and what this portfolio is for',
     placeholder: 'e.g. Data Science learner, final year, applying for analyst roles in Singapore',
-    cta: 'Set my angle'
+    cta: 'Set my angle',
+    checkpoint: true
   },
   {
     id: 'about',
@@ -2602,15 +2615,17 @@ var PF_STEPS = [
   {
     id: 'projects',
     title: 'Projects',
-    why: 'The part that does the persuading. Three to five, strongest first, each one problem then action then outcome.',
+    why: 'The part that does the persuading — especially if you are reskilling and do not yet have matching work experience. Course and capstone projects count as real evidence of applied capability. Three to five, strongest first.',
     include: [
-      'The problem — what needed solving and for whom.',
-      'What you did — your contribution specifically, not the team\'s.',
-      'The outcome — with a number wherever one exists.',
-      'A link to the live thing, repo, deck or document.'
+      'Business Problem — the real issue this addressed, and for whom.',
+      'What I Did — your specific contribution, not the team\'s.',
+      'What I Created — the tangible output: dashboard, model, campaign, app, plan.',
+      'Tools — what you built it with.',
+      'Outcome — the result, with a number wherever one exists.',
+      'Evidence / Capabilities — what this proves you can do, plus a link to the live thing, repo, deck or document.'
     ],
-    ask: 'Describe your projects — rough notes are fine',
-    placeholder: 'e.g. dashboard for the sales team, churn prediction model, group capstone on retail analytics',
+    ask: 'Describe your projects — course work and capstones count, rough notes are fine',
+    placeholder: 'e.g. capstone: retail churn model in Python, built a Power BI dashboard for a group project',
     cta: 'Write up my projects'
   },
   {
@@ -2657,6 +2672,12 @@ var PF_STEPS = [
 var pfStep = 0;
 var pfProfile = '';
 var pfDrafts = {};
+// null = not answered yet, true/false = whether they've done a Talent Team
+// coaching session or career-builder workshop. Someone who has already been
+// coached usually has role clarity; someone who hasn't needs the flow to
+// lean on project evidence instead of a target role they don't have yet.
+var pfCoached = null;
+var pfTargetRoles = '';
 
 function pfTab(which) {
   ['guide','ask','review'].forEach(function(k) {
@@ -2684,18 +2705,53 @@ function pfRender() {
   html += '<div class="pf-include"><div class="pf-include-h">What goes in this section</div><ul>';
   s.include.forEach(function(li) { html += '<li>' + escapeHtml(li) + '</li>'; });
   html += '</ul></div>';
-  html += '<div class="pf-ask">' + escapeHtml(s.ask) + '</div>';
-  html += '<textarea class="txt-in" id="pf-in" rows="2" placeholder="' + escapeHtml(s.placeholder) +
-          '" oninput="autoGrow(this)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();pfGenerate();}"></textarea>';
+  if (s.checkpoint) html += pfCheckpointHtml();
+  html += '<div class="pf-ask">' + escapeHtml(pfAskText(s)) + '</div>';
+  html += '<textarea class="txt-in" id="pf-in" rows="2" placeholder="' + escapeHtml(pfPlaceholder(s)) +
+          '" oninput="autoGrow(this)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();pfGenerate();}">' +
+          escapeHtml(s.checkpoint && pfCoached === true ? pfTargetRoles : '') + '</textarea>';
+  var awaitingCheckpoint = s.checkpoint && pfCoached === null;
   html += '<div class="pf-nav">';
   html += '<button class="pf-btn ghost" onclick="pfBack()"' + (pfStep === 0 ? ' disabled' : '') + '>Back</button>';
-  html += '<button class="pf-btn" id="pf-go" onclick="pfGenerate()">' + escapeHtml(s.cta) + '</button>';
+  html += '<button class="pf-btn" id="pf-go" onclick="pfGenerate()"' + (awaitingCheckpoint ? ' disabled' : '') + '>' + escapeHtml(s.cta) + '</button>';
   html += '</div></div>';
   html += '<div id="pf-out"></div>';
 
   document.getElementById('pf-body').innerHTML = html;
   var out = pfDrafts[s.id];
   if (out) pfShow(out, last);
+}
+
+// Talent-team checkpoint on step 1: someone already coached usually knows
+// their target roles; someone who hasn't been should lean on project
+// evidence instead of a role they haven't settled on yet.
+function pfCheckpointHtml() {
+  var y = pfCoached === true ? ' active' : '';
+  var n = pfCoached === false ? ' active' : '';
+  return '<div class="pf-checkpoint">' +
+    '<div class="pf-checkpoint-q">Have you attended an EduClaas career-builder workshop or 1:1 coaching session?</div>' +
+    '<div class="pf-check-btns">' +
+      '<button type="button" class="pf-pill' + y + '" onclick="pfSetCoached(true)">Yes, I have</button>' +
+      '<button type="button" class="pf-pill' + n + '" onclick="pfSetCoached(false)">Not yet</button>' +
+    '</div></div>';
+}
+
+function pfSetCoached(val) {
+  pfCoached = val;
+  pfTargetRoles = '';
+  pfRender();
+  var el = document.getElementById('pf-in');
+  if (el) el.focus();
+}
+
+function pfAskText(s) {
+  if (s.checkpoint && pfCoached === true) return 'Which roles did that session help you target?';
+  return s.ask;
+}
+function pfPlaceholder(s) {
+  if (s.checkpoint && pfCoached === true) return 'e.g. Data Analyst, Marketing Executive roles';
+  if (s.checkpoint && pfCoached === false) return 'e.g. Data Science learner, final year — role still open, focusing on my project evidence';
+  return s.placeholder;
 }
 
 function pfBack() { if (pfStep > 0) { pfStep--; pfRender(); } }
@@ -2745,17 +2801,26 @@ async function pfGenerate() {
   var btn = document.getElementById('pf-go');
   var last = pfStep === PF_STEPS.length - 1;
 
-  if (s.id === 'profile') {
+  if (s.checkpoint) {
+    if (pfCoached === null) return; // must answer the checkpoint first
     if (!said) { el.focus(); return; }
+    if (pfCoached === true) pfTargetRoles = said;
     pfProfile = said;
   }
 
   btn.disabled = true;
   btn.textContent = 'Working…';
 
+  var coachLine = pfCoached === true
+    ? 'COACHING STATUS: Has attended an EduClaas coaching session / career-builder workshop. Target roles: ' + (pfTargetRoles || 'stated above') + '. Write toward those roles directly.'
+    : pfCoached === false
+      ? 'COACHING STATUS: Has not yet attended coaching. No fixed target role — do not invent one. Lead with applied project evidence (business problem solved, what they built, outcome) rather than a role-specific pitch.'
+      : 'COACHING STATUS: not stated';
+
   var prompt =
     'STEP: ' + s.title + ' (' + (pfStep + 1) + ' of ' + PF_STEPS.length + ')\n' +
     'WHO THEY ARE: ' + (pfProfile || 'not stated') + '\n' +
+    coachLine + '\n' +
     'WHAT THIS SECTION MUST CONTAIN:\n- ' + s.include.join('\n- ') + '\n' +
     'WHAT THEY TOLD ME FOR THIS STEP: ' + (said || 'nothing — infer sensible content from who they are and mark anything uncertain in [brackets]');
 
@@ -2778,10 +2843,15 @@ async function pfGenerate() {
 function pfOffline(s, said) {
   var who = pfProfile || said || '[your field]';
   var T = {
-    profile: 'DRAFT:\nAngle set: ' + who + '\n\nEvery following section will be written for this reader.\n\nNOTES:\n• Keep this in mind at each step — if a line does not serve this reader, cut it.',
+    profile: 'DRAFT:\nAngle set: ' + who + '\n' + (pfCoached === true
+      ? 'Target roles from your coaching session: ' + (pfTargetRoles || who) + '\n'
+      : pfCoached === false
+        ? 'No fixed target role yet — the following steps will lead with your project evidence instead.\n'
+        : '') +
+      '\nEvery following section will be written for this reader.\n\nNOTES:\n• Keep this in mind at each step — if a line does not serve this reader, cut it.',
     about: 'DRAFT:\nI am a [role] working in [field], focused on [the specific thing you do].\n\nI have [X years / the length of your programme] of experience with [your two or three strongest tools or methods], and my recent work covers [project area].\n\nI am currently looking for [role or opportunity] where I can [the value you bring].\n\nNOTES:\n• Replace every bracket with something specific — vague beats nothing, specific beats vague.\n• Lead with capability, not with coursework.\n• Three to four sentences is the right length. Cut anything beyond that.',
     skills: 'DRAFT:\nTechnical\n• [Tool or language] — [proficient / working knowledge]\n• [Tool or language] — [level]\n• [Tool or language] — [level]\n\nProfessional\n• [Skill you can evidence in a project below]\n• [Skill you can evidence in a project below]\n\nNOTES:\n• Only list a soft skill if a project below proves it.\n• Order technical skills by how central they are to the roles you want.',
-    projects: 'DRAFT:\n[Project name]\nProblem: [what needed solving, and for whom]\nWhat I did: [your specific contribution]\nOutcome: [result, with a number where one exists]\nLink: [live site, repo, deck or document]\n\n[Repeat this block for each project — three to five, strongest first]\n\nNOTES:\n• Strongest project first. Most readers stop after the first one.\n• Every project needs a link. A described project is a claim; a linked one is evidence.\n• If you have no number, state the qualitative outcome plainly rather than padding.',
+    projects: 'DRAFT:\n[Project name]\nBusiness Problem: [what needed solving, and for whom]\nWhat I Did: [your specific contribution]\nWhat I Created: [the tangible output — dashboard, model, campaign, app]\nTools: [what you built it with]\nOutcome: [result, with a number where one exists]\nEvidence / Capabilities: [what this proves you can do] — [link to the live thing, repo, deck or document]\n\n[Repeat this block for each project — three to five, strongest first]\n\nNOTES:\n• Strongest project first. Most readers stop after the first one.\n• Course and capstone projects count as real evidence — you do not need paid work experience to have a strong project here.\n• Every project needs a link. A described project is a claim; a linked one is evidence.',
     certs: 'DRAFT:\n• [Credential name] — [issuing body], [month year]\n• [Credential name] — [issuing body], [month year]\n\nNOTES:\n• Full names, no abbreviations a reader outside your field would not know.\n• Add a verification link where the issuer provides one.\n• Newest first.',
     contact: 'DRAFT:\nEmail: [your professional email]\nLinkedIn: [your profile URL]\n[GitHub / Kaggle / Behance / booking link, if relevant to your field]\n\nNOTES:\n• Put this where it is visible without scrolling, and again at the foot of the page.\n• Make sure your LinkedIn headline says the same thing this portfolio says.',
     build: 'DRAFT:\nIf you want it live today: use Carrd.\n1. Go to carrd.co and sign up — the free tier covers up to 3 sites.\n2. Pick a one-page template.\n3. Paste each section you drafted into the matching block.\n4. Publish. You get a shareable link immediately.\n\nIf you have a couple of hours and want it more designed: use Framer.\n1. Go to framer.com and sign up.\n2. Start from a portfolio template.\n3. Give each section from these steps its own block or page.\n4. Publish.\n\nNOTES:\n• Publish something today and refine it later — an unfinished live portfolio beats a perfect unpublished one.\n• Once it is live, come back to the "Review mine" tab and paste the link for an audit.'
