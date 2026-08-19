@@ -1256,10 +1256,8 @@ footer span { color: #fff; font-weight: 600; }
       <p>Your Placement Index reflects your standing against defined placement criteria — including how consistently you perform and how interview-ready you are. Use this to assess your standing and evidence your case <b>before</b> submitting an appeal, so your application goes forward complete.</p>
       <ul>
         <li><b>Tick</b> each criterion you've met and <b>attach proof</b> for it.</li>
-        <li><b>Enter your average marks</b> — consistently strong grades are a good signal you'll hold up well in interviews too.</li>
         <li><b>Run the mock interview drill</b> before you submit — it counts toward your score.</li>
-        <li><b>Submit</b> to get a Placement Index score out of 100 with a breakdown per criterion.</li>
-        <li><b>Anything unmet</b> shows up in the report — fix those, then re-submit.</li>
+        <li><b>Submit</b> to get the Placement Index score out of 100 with a breakdown per criterion.</li>
       </ul>
       <span class="info-note">📌 Your result is logged in the admin dashboard for the Talent Acquisition team to review.</span>
     </div>
@@ -1276,44 +1274,18 @@ footer span { color: #fff; font-weight: 600; }
     <p style="font-size:14px;color:var(--muted);margin-bottom:16px;">Check all criteria, attach proof documents, then submit your appeal.</p>
     <div class="elig-list">
 
-      <!-- ITEM 1 -->
-      <div class="elig-item" id="ei1" onclick="toggleEligItem(1)" style="cursor:pointer;">
-        <div class="elig-chk" id="ec1">✓</div>
-        <div class="elig-content" style="flex:1;">
-          <div class="elig-label">All assignments reviewed and graded above 75 out of 100</div>
-          <div style="margin-top:12px;" onclick="event.stopPropagation()">
-            <p style="font-size:13px;color:#5A6A9B;margin-bottom:6px;">Attach proof document:</p>
-            <input type="file" accept="*/*" id="fi1" onchange="showAttach(this,'a1n')"
-              style="display:block;width:100%;font-size:16px;padding:8px;border:2px solid #C9A84C;border-radius:8px;background:#fff;color:#1B2E6B;cursor:pointer;">
-            <div id="a1n" style="font-size:12px;color:#1B2E6B;margin-top:4px;font-weight:600;"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ITEM 2 (suggested — confirm wording before this goes live) -->
+      <!-- ITEM 2: capstone / portfolio, by file or link -->
       <div class="elig-item" id="ei2" onclick="toggleEligItem(2)" style="cursor:pointer;">
         <div class="elig-chk" id="ec2">✓</div>
         <div class="elig-content" style="flex:1;">
           <div class="elig-label">Capstone / final project or portfolio submitted and assessed</div>
           <div style="margin-top:12px;" onclick="event.stopPropagation()">
-            <p style="font-size:13px;color:#5A6A9B;margin-bottom:6px;">Attach proof document:</p>
+            <p style="font-size:13px;color:#5A6A9B;margin-bottom:6px;">Attach a file, or paste a link — whichever you have:</p>
             <input type="file" accept="*/*" id="fi2" onchange="showAttach(this,'a2n')"
               style="display:block;width:100%;font-size:16px;padding:8px;border:2px solid #C9A84C;border-radius:8px;background:#fff;color:#1B2E6B;cursor:pointer;">
             <div id="a2n" style="font-size:12px;color:#1B2E6B;margin-top:4px;font-weight:600;"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ITEM 3 (suggested — confirm wording before this goes live) -->
-      <div class="elig-item" id="ei3" onclick="toggleEligItem(3)" style="cursor:pointer;">
-        <div class="elig-chk" id="ec3">✓</div>
-        <div class="elig-content" style="flex:1;">
-          <div class="elig-label">Completion of any particular task, practical input, or activity assigned during the programme</div>
-          <div style="margin-top:12px;" onclick="event.stopPropagation()">
-            <p style="font-size:13px;color:#5A6A9B;margin-bottom:6px;">Attach proof document:</p>
-            <input type="file" accept="*/*" id="fi3" onchange="showAttach(this,'a3n')"
-              style="display:block;width:100%;font-size:16px;padding:8px;border:2px solid #C9A84C;border-radius:8px;background:#fff;color:#1B2E6B;cursor:pointer;">
-            <div id="a3n" style="font-size:12px;color:#1B2E6B;margin-top:4px;font-weight:600;"></div>
+            <input type="text" id="cap-link" placeholder="Or paste a link — portfolio site, repo, deck, doc"
+              style="display:block;width:100%;font-size:16px;padding:8px;margin-top:8px;border:2px solid #C9A84C;border-radius:8px;background:#fff;color:#1B2E6B;">
           </div>
         </div>
       </div>
@@ -1335,7 +1307,7 @@ footer span { color: #fff; font-weight: 600; }
       <div class="elig-item" id="ei5">
         <div class="elig-chk" id="ec5">✓</div>
         <div class="elig-content" style="flex:1;">
-          <div class="elig-label">Mock Interview Questions Drill completed</div>
+          <div class="elig-label">Mock Interview Questions Drill</div>
           <p style="font-size:13px;color:#5A6A9B;margin:8px 0;">Practising out loud is what actually builds interview confidence. Run a short drill of real interview questions before you submit.</p>
           <button type="button" class="capture-btn" style="width:auto;padding:10px 18px;font-size:14px;" onclick="startMockDrill()">🎤 Start Mock Interview Drill</button>
           <div id="mi-drill-panel" style="display:none;"></div>
@@ -1614,7 +1586,7 @@ function startPortfolio() {
   document.getElementById('p-main').style.display = 'block';
   saveLearnerActivity(email, name, 'Portfolio Support');
   portfolioChatHistory = []; // fresh AI conversation for this session
-  pfStep = 0; pfProfile = ''; pfDrafts = {}; pfCareerBuilder = null; pfCoachingSession = null; pfTargetRoles = '';
+  pfStep = 0; pfProfile = ''; pfDrafts = {}; pfCareerBuilder = null; pfCoachingSession = null;
   pfTab('guide');
   pfRender();
 }
@@ -2600,6 +2572,11 @@ function offlinePortfolioReview(text) {
 // materially different drafts from the same flow.
 var PF_STEPS = [
   {
+    id: 'checkpoint',
+    title: 'Before we start',
+    why: 'This tells me how much role clarity to assume, so every later section is written for the right reader.'
+  },
+  {
     id: 'profile',
     title: 'Start with your angle',
     why: 'Everything else follows from this. A portfolio aimed at no one in particular persuades no one in particular.',
@@ -2610,8 +2587,7 @@ var PF_STEPS = [
     ],
     ask: 'Tell me who you are and what this portfolio is for',
     placeholder: 'e.g. Data Science learner, final year, applying for analyst roles in Singapore',
-    cta: 'Set my angle',
-    checkpoint: true
+    cta: 'Set my angle'
   },
   {
     id: 'projects',
@@ -2708,7 +2684,6 @@ var pfDrafts = {};
 // to lean on project evidence instead of a target role they don't have yet.
 var pfCareerBuilder = null;
 var pfCoachingSession = null;
-var pfTargetRoles = '';
 function pfCoachedAny() { return pfCareerBuilder === true || pfCoachingSession === true; }
 function pfCoachedAnswered() { return pfCareerBuilder !== null && pfCoachingSession !== null; }
 
@@ -2735,18 +2710,24 @@ function pfRender() {
   var html = '<div class="pf-card">';
   html += '<div class="pf-title">' + escapeHtml(s.title) + '</div>';
   html += '<div class="pf-why">' + escapeHtml(s.why) + '</div>';
-  html += '<div class="pf-include"><div class="pf-include-h">What goes in this section</div><ul>';
-  s.include.forEach(function(li) { html += '<li>' + escapeHtml(li) + '</li>'; });
-  html += '</ul></div>';
-  if (s.checkpoint) html += pfCheckpointHtml();
-  html += '<div class="pf-ask">' + escapeHtml(pfAskText(s)) + '</div>';
-  html += '<textarea class="txt-in" id="pf-in" rows="2" placeholder="' + escapeHtml(pfPlaceholder(s)) +
-          '" oninput="autoGrow(this)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();pfGenerate();}">' +
-          escapeHtml(s.checkpoint && pfCoachedAny() ? pfTargetRoles : '') + '</textarea>';
-  var awaitingCheckpoint = s.checkpoint && !pfCoachedAnswered();
+
+  if (s.id === 'checkpoint') {
+    html += pfCheckpointHtml();
+    html += '<div class="pf-nav">';
+    html += '<button class="pf-btn ghost" onclick="pfBack()"' + (pfStep === 0 ? ' disabled' : '') + '>Back</button>';
+    html += '<button class="pf-btn" id="pf-go" onclick="pfCheckpointContinue()"' + (!pfCoachedAnswered() ? ' disabled' : '') + '>Continue →</button>';
+    html += '</div></div>';
+    html += '<div id="pf-out"></div>';
+    document.getElementById('pf-body').innerHTML = html;
+    return;
+  }
+
+  html += '<div class="pf-ask">' + escapeHtml(s.ask) + '</div>';
+  html += '<textarea class="txt-in" id="pf-in" rows="2" placeholder="' + escapeHtml(s.placeholder) +
+          '" oninput="autoGrow(this)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();pfGenerate();}"></textarea>';
   html += '<div class="pf-nav">';
   html += '<button class="pf-btn ghost" onclick="pfBack()"' + (pfStep === 0 ? ' disabled' : '') + '>Back</button>';
-  html += '<button class="pf-btn" id="pf-go" onclick="pfGenerate()"' + (awaitingCheckpoint ? ' disabled' : '') + '>' + escapeHtml(s.cta) + '</button>';
+  html += '<button class="pf-btn" id="pf-go" onclick="pfGenerate()">' + escapeHtml(s.cta) + '</button>';
   html += '</div></div>';
   html += '<div id="pf-out"></div>';
 
@@ -2755,11 +2736,12 @@ function pfRender() {
   if (out) pfShow(out, last);
 }
 
-// Talent-team checkpoint on step 1: someone already through a career-builder
-// workshop and/or a 1:1 coaching session usually knows their target roles;
-// someone who hasn't been should lean on project evidence instead of a role
-// they haven't settled on yet. Asked as two separate questions because a
-// learner can have done either, both, or neither.
+// Talent-team checkpoint, asked as its own first step: someone who has been
+// through a career-builder workshop and/or a 1:1 coaching session usually
+// knows their target roles already; someone who hasn't should lean on
+// project evidence instead of a role they haven't settled on yet. Asked as
+// two separate questions because a learner can have done either, both, or
+// neither.
 function pfCheckpointHtml() {
   var cy = pfCareerBuilder === true ? ' active' : '';
   var cn = pfCareerBuilder === false ? ' active' : '';
@@ -2778,31 +2760,9 @@ function pfCheckpointHtml() {
     '</div></div>';
 }
 
-function pfSetCareerBuilder(val) {
-  pfCareerBuilder = val;
-  pfTargetRoles = '';
-  pfRender();
-  var el = document.getElementById('pf-in');
-  if (el) el.focus();
-}
-
-function pfSetCoachingSession(val) {
-  pfCoachingSession = val;
-  pfTargetRoles = '';
-  pfRender();
-  var el = document.getElementById('pf-in');
-  if (el) el.focus();
-}
-
-function pfAskText(s) {
-  if (s.checkpoint && pfCoachedAny()) return 'Which roles did that help you target?';
-  return s.ask;
-}
-function pfPlaceholder(s) {
-  if (s.checkpoint && pfCoachedAny()) return 'e.g. Data Analyst, Marketing Executive roles';
-  if (s.checkpoint && pfCoachedAnswered()) return 'e.g. Data Science learner, final year — role still open, focusing on my project evidence';
-  return s.placeholder;
-}
+function pfSetCareerBuilder(val) { pfCareerBuilder = val; pfRender(); }
+function pfSetCoachingSession(val) { pfCoachingSession = val; pfRender(); }
+function pfCheckpointContinue() { if (pfCoachedAnswered()) pfNext(); }
 
 function pfBack() { if (pfStep > 0) { pfStep--; pfRender(); } }
 function pfNext() {
@@ -2851,12 +2811,8 @@ async function pfGenerate() {
   var btn = document.getElementById('pf-go');
   var last = pfStep === PF_STEPS.length - 1;
 
-  if (s.checkpoint) {
-    if (!pfCoachedAnswered()) return; // must answer both checkpoint questions first
-    if (!said) { el.focus(); return; }
-    if (pfCoachedAny()) pfTargetRoles = said;
-    pfProfile = said;
-  }
+  if (!said) { el.focus(); return; }
+  if (s.id === 'profile') pfProfile = said;
 
   btn.disabled = true;
   btn.textContent = 'Working…';
@@ -2865,7 +2821,7 @@ async function pfGenerate() {
   if (pfCareerBuilder === true) coachedBits.push('career-builder workshop');
   if (pfCoachingSession === true) coachedBits.push('1:1 coaching session');
   var coachLine = pfCoachedAny()
-    ? 'COACHING STATUS: Has attended an EduClaas ' + coachedBits.join(' and ') + '. Target roles: ' + (pfTargetRoles || 'stated above') + '. Write toward those roles directly.'
+    ? 'COACHING STATUS: Has attended an EduClaas ' + coachedBits.join(' and ') + '. If they stated target roles, write toward those roles directly.'
     : pfCoachedAnswered()
       ? 'COACHING STATUS: Has not yet attended a career-builder workshop or coaching session. No fixed target role — do not invent one. Lead with applied project evidence (business problem solved, what they built, outcome) rather than a role-specific pitch.'
       : 'COACHING STATUS: not stated';
@@ -2897,7 +2853,7 @@ function pfOffline(s, said) {
   var who = pfProfile || said || '[your field]';
   var T = {
     profile: 'DRAFT:\nAngle set: ' + who + '\n' + (pfCoachedAny()
-      ? 'Target roles from your workshop/coaching: ' + (pfTargetRoles || who) + '\n'
+      ? 'You have been through EduClaas coaching/workshop — later sections will write toward the roles you mentioned above.\n'
       : pfCoachedAnswered()
         ? 'No fixed target role yet — the following steps will lead with your project evidence instead.\n'
         : '') +
@@ -3099,26 +3055,25 @@ function finishMockDrill() {
 }
 
 function submitElig() {
-  var kpis = [
-    { label: 'Assignments graded above 75', weight: 25, elId: 'ei1', fileId: 'a1n' },
-    { label: 'Capstone / portfolio submitted', weight: 20, elId: 'ei2', fileId: 'a2n' },
-    { label: 'Task / practical input completed', weight: 15, elId: 'ei3', fileId: 'a3n' }
-  ];
   var total = 0; var rows = '';
-  kpis.forEach(function(k) {
-    var item = document.getElementById(k.elId);
-    var checked = item && item.classList.contains('checked');
-    var attName = document.getElementById(k.fileId);
-    var hasFile = attName && attName.textContent.trim() !== '';
-    var pts = checked ? (hasFile ? k.weight : Math.round(k.weight * 0.6)) : 0;
-    total += pts;
-    var status = checked && hasFile ? '✅ Complete' : checked ? '⚠️ No document' : '❌ Not done';
-    var sc = checked && hasFile ? '#16a34a' : checked ? '#d97706' : '#dc2626';
-    rows += '<tr><td>' + k.label + '</td><td style="color:'+sc+';font-weight:600;">' + status + '</td><td style="font-weight:700;color:#E03070;">' + pts + '/' + k.weight + '</td></tr>';
-  });
+
+  // Capstone / portfolio — a file or a link both count as evidence.
+  var capWeight = 40;
+  var capItem = document.getElementById('ei2');
+  var capChecked = capItem && capItem.classList.contains('checked');
+  var capFileName = document.getElementById('a2n');
+  var hasFile = capFileName && capFileName.textContent.trim() !== '';
+  var capLinkInp = document.getElementById('cap-link');
+  var hasLink = capLinkInp && capLinkInp.value.trim() !== '';
+  var hasEvidence = hasFile || hasLink;
+  var capPts = capChecked ? (hasEvidence ? capWeight : Math.round(capWeight * 0.6)) : 0;
+  total += capPts;
+  var capStatus = capChecked && hasEvidence ? '✅ Complete' : capChecked ? '⚠️ No file or link' : '❌ Not done';
+  var capColor = capChecked && hasEvidence ? '#16a34a' : capChecked ? '#d97706' : '#dc2626';
+  rows += '<tr><td>Capstone / portfolio submitted</td><td style="color:'+capColor+';font-weight:600;">' + capStatus + '</td><td style="font-weight:700;color:#E03070;">' + capPts + '/' + capWeight + '</td></tr>';
 
   // Consistent performance — average marks, scaled rather than a flat tick.
-  var marksWeight = 20;
+  var marksWeight = 30;
   var marksInp = document.getElementById('marks-avg');
   var marksVal = marksInp ? parseFloat(marksInp.value) : NaN;
   if (isNaN(marksVal)) marksVal = 0;
@@ -3130,10 +3085,10 @@ function submitElig() {
   rows += '<tr><td>Consistent performance (avg marks: ' + (marksVal || '—') + ')</td><td style="color:'+marksColor+';font-weight:600;">' + marksStatus + '</td><td style="font-weight:700;color:#E03070;">' + marksPts + '/' + marksWeight + '</td></tr>';
 
   // Mock interview drill.
-  var drillWeight = 20;
+  var drillWeight = 30;
   var drillPts = miDrillDone ? drillWeight : 0;
   total += drillPts;
-  rows += '<tr><td>Mock interview drill completed</td><td style="color:'+(miDrillDone ? '#16a34a' : '#dc2626')+';font-weight:600;">' + (miDrillDone ? '✅ Complete' : '❌ Not done') + '</td><td style="font-weight:700;color:#E03070;">' + drillPts + '/' + drillWeight + '</td></tr>';
+  rows += '<tr><td>Mock interview drill</td><td style="color:'+(miDrillDone ? '#16a34a' : '#dc2626')+';font-weight:600;">' + (miDrillDone ? '✅ Complete' : '❌ Not done') + '</td><td style="font-weight:700;color:#E03070;">' + drillPts + '/' + drillWeight + '</td></tr>';
 
   rows += '<tr style="background:rgba(224,48,112,0.05);"><td style="font-weight:700;">Total Score</td><td></td><td style="font-size:16px;font-weight:700;color:#E03070;">' + total + '/100</td></tr>';
   document.getElementById('kpi-rows').innerHTML = rows;
