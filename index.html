@@ -2372,7 +2372,7 @@ var MS_AI_ENDPOINT = 'https://mentorsync-ai.anushaateduclass.workers.dev';
 
 // Long submissions take far longer than a chat reply. A single ceiling was
 // aborting document feedback before the model finished.
-var AI_TIMEOUT_MS = 15000;
+var AI_TIMEOUT_MS = 9000;
 var AI_TIMEOUT_LONG_MS = 120000;
 
 // Tolerates the URL being pasted without a scheme or with a trailing slash —
@@ -2806,16 +2806,8 @@ var PF_STEPS = [
   },
   {
     id: 'build',
-    title: 'Build and publish',
-    why: 'You now have the content. This is the half hour that turns it into a link you can send.',
-    include: [
-      'Carrd — one page, live in about 30 minutes, free for up to 3 sites. Best if you want it done today.',
-      'Framer — multi-page and more designed, with a steeper learning curve. Best for visual fields.',
-      'Paste each section you drafted into the matching block, then publish.'
-    ],
-    ask: 'Tell me which you are leaning towards, or ask and I will pick for you',
-    placeholder: 'e.g. I have an hour and no design experience',
-    cta: 'Get my build plan'
+    title: 'Your finished portfolio',
+    why: 'Everything you wrote in the steps above, assembled into one clean, one-page document — ready to copy straight into any tool.'
   }
 ];
 
@@ -2862,6 +2854,21 @@ function pfRender() {
     html += '<button class="pf-btn" id="pf-go" onclick="pfCheckpointContinue()"' + (!pfCoachedAnswered() ? ' disabled' : '') + '>Continue →</button>';
     html += '</div></div>';
     html += '<div id="pf-out"></div>';
+    document.getElementById('pf-body').innerHTML = html;
+    return;
+  }
+
+  // Assembled instantly and locally from the drafts already generated in
+  // earlier steps — no AI call, no wait, and it is their own written
+  // content rather than a tool recommendation.
+  if (s.id === 'build') {
+    var assembled = pfAssembleFinal();
+    html += '<div class="pf-draft"><div class="pf-draft-h"><span>Your one-page portfolio — copy this in</span>' +
+      '<button class="pf-copy" onclick="pfCopy(this)">Copy</button></div>' +
+      '<div class="pf-draft-body">' + escapeHtml(assembled) + '</div></div>';
+    html += '<div class="pf-done"><b>That is the full portfolio, in your own words.</b> Copy it into any design tool to make it a live page. Use the Back button to revisit and edit any section — this reassembles automatically.</div>';
+    html += '<div class="pf-nav"><button class="pf-btn ghost" onclick="pfBack()">Back</button></div>';
+    html += '</div>';
     document.getElementById('pf-body').innerHTML = html;
     return;
   }
@@ -3001,6 +3008,8 @@ async function pfGenerate() {
 // draft, but still something the person can paste and edit.
 function pfOffline(s, said) {
   var who = pfProfile || said || '[your field]';
+  var bits = splitBits(said);
+  var bullets = bits.length ? bits.map(function(b) { return '• ' + b; }).join('\n') : '• [You did not add anything here yet — go back and fill this in]';
   var T = {
     profile: 'DRAFT:\nAngle set: ' + who + '\n' + (pfCoachedAny()
       ? 'You have been through EduClaas coaching/workshop — later sections will write toward the roles you mentioned above.\n'
@@ -3008,14 +3017,50 @@ function pfOffline(s, said) {
         ? 'No fixed target role yet — the following steps will lead with your project evidence instead.\n'
         : '') +
       '\nEvery following section will be written for this reader.\n\nNOTES:\n• Keep this in mind at each step — if a line does not serve this reader, cut it.',
-    about: 'DRAFT:\n• [Role] in [field], focused on [the specific thing you do]\n• [X years / the length of your programme] with [your two or three strongest tools or methods]\n• Recent work: [project area]\n• Looking for: [role or opportunity] where I can [the value you bring]\n\nNOTES:\n• Replace every bracket with something specific — vague beats nothing, specific beats vague.\n• Lead with capability, not with coursework.',
-    skills: 'DRAFT:\nTechnical\n• [Tool or language] — [proficient / working knowledge]\n• [Tool or language] — [level]\n• [Tool or language] — [level]\n\nProfessional\n• [Skill you can evidence in a project below]\n• [Skill you can evidence in a project below]\n\nNOTES:\n• Only list a soft skill if a project below proves it.\n• Order technical skills by how central they are to the roles you want.',
-    projects: 'DRAFT:\n[Project Title]\nApplied Project | [Capability Area]\n\nBusiness Challenge\n[The realistic business problem, customer need or opportunity this addressed, in about 50 words]\n\nProject Objective\n• [Objective 1]\n• [Objective 2]\n\nWhat I Did\n• [Action-oriented bullet — Analysed / Designed / Built / Developed / Automated / Integrated / Tested / Visualised / Evaluated / Recommended]\n• [Bullet]\n• [Bullet]\n\nSolution Created\n[What you actually produced — dashboard, model, campaign, workflow, agent, analysis or recommendation]\n\nTools & Methods\n[Technologies, platforms and methodologies actually used]\n\nKey Insights / Outcomes\n• [Finding or demonstrated result]\n• [Recommendation or potential business value]\n\nEvidence of Work\n• [Artefact — screenshot, workflow, campaign flow, visualisation, model result, prototype]\n\nCapabilities Demonstrated\n• [Capability 1] • [Capability 2] • [Capability 3] • [Capability 4]\n\nHow I Would Explain This Project in an Interview\n[A natural 45-60 second explanation: problem → what I did → tools → what I created/found → why it matters]\n\nNOTES:\n• This is applied project experience, not "just an assignment" — write it that way. Say "As part of an applied [field] project, I built..." not "For my course assignment, I had to...".\n• Never state a result you did not actually get — keep potential business value clearly separate from demonstrated results.\n• Course and capstone projects count as real evidence — you do not need paid work experience to have a strong case study here.\n• Add a link to the live thing, repo, deck or document wherever you can — a described project is a claim, a linked one is evidence.',
-    certs: 'DRAFT:\n• [Credential name] — [issuing body], [month year]\n• [Credential name] — [issuing body], [month year]\n\nNOTES:\n• Full names, no abbreviations a reader outside your field would not know.\n• Add a verification link where the issuer provides one.\n• Newest first.',
-    contact: 'DRAFT:\nEmail: [your professional email]\nLinkedIn: [your profile URL]\n[GitHub / Kaggle / Behance / booking link, if relevant to your field]\n\nNOTES:\n• Put this where it is visible without scrolling, and again at the foot of the page.\n• Make sure your LinkedIn headline says the same thing this portfolio says.',
-    build: 'DRAFT:\nIf you want it live today: use Carrd.\n1. Go to carrd.co and sign up — the free tier covers up to 3 sites.\n2. Pick a one-page template.\n3. Paste each section you drafted into the matching block.\n4. Publish. You get a shareable link immediately.\n\nIf you have a couple of hours and want it more designed: use Framer.\n1. Go to framer.com and sign up.\n2. Start from a portfolio template.\n3. Give each section from these steps its own block or page.\n4. Publish.\n\nNOTES:\n• Publish something today and refine it later — an unfinished live portfolio beats a perfect unpublished one.\n• Once it is live, come back to the "Review mine" tab and paste the link for an audit.'
+    about: 'DRAFT:\n' + bullets + '\n\nNOTES:\n• This is your own wording, lightly split into lines — tighten anything that reads long.\n• Lead with capability, not with coursework.',
+    skills: 'DRAFT:\n' + bullets + '\n\nNOTES:\n• Split these into Technical and Soft/Professional groups when you publish.\n• Order technical skills by how central they are to the roles you want.',
+    projects: 'DRAFT:\n' + (bits[0] || 'Applied Project') + '\nApplied Project | ' + who + '\n\n' + bullets + '\n\nNOTES:\n• Reshape the lines above into Business Challenge / What I Did / Solution Created / Tools / Outcome — see "What goes in this section" above for the full structure.\n• This is applied project experience — write it that way, not as "just an assignment".\n• Add a link to the live thing, repo, deck or document — a described project is a claim, a linked one is evidence.',
+    certs: 'DRAFT:\n' + bullets + '\n\nNOTES:\n• Full names, no abbreviations a reader outside your field would not know.\n• Add a verification link where the issuer provides one.\n• Newest first.',
+    contact: 'DRAFT:\n' + bullets + '\n\nNOTES:\n• Put this where it is visible without scrolling, and again at the foot of the page.\n• Make sure your LinkedIn headline says the same thing this portfolio says.'
   };
   return T[s.id] || 'DRAFT:\n[Content for ' + s.title + ']';
+}
+
+// Breaks a raw typed answer into short standalone fragments so the offline
+// fallback can show the learner's own words as bullets instead of a wall of
+// text or empty bracket placeholders.
+function splitBits(text) {
+  if (!text) return [];
+  return text.split(/[,;•\n]+|\.\s+(?=[A-Z])/)
+    .map(function(s) { return s.trim().replace(/\.$/, ''); })
+    .filter(function(s) { return s.length > 1; });
+}
+
+// Compiles every step's own DRAFT body into one clean, headed, one-page
+// document — instant and local, no AI call, no wait.
+function pfAssembleFinal() {
+  var order = ['profile', 'projects', 'about', 'skills', 'certs', 'contact'];
+  var headings = {
+    profile: 'PROFILE',
+    projects: 'APPLIED PROJECT CASE STUDY',
+    about: 'ABOUT ME',
+    skills: 'SKILLS',
+    certs: 'CERTIFICATIONS',
+    contact: 'CONTACT'
+  };
+  var out = '';
+  order.forEach(function(id) {
+    var raw = pfDrafts[id];
+    if (!raw) return;
+    var body = pfParse(raw).draft;
+    if (!body) return;
+    out += headings[id] + '\n' + body.trim() + '\n\n';
+  });
+  if (!out) {
+    return 'You have not generated any sections yet. Go back through the earlier steps first — this page reassembles automatically from what you write.';
+  }
+  out += '— — —\nBuild it: copy this into Carrd, Framer or Canva to turn it into a live page.';
+  return out;
 }
 
 function sendPortfolio() {
