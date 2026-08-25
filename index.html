@@ -1008,6 +1008,9 @@ footer span { color: #fff; font-weight: 600; }
           </div>
         </div>
         <div class="cstat-row" id="coach-stats"></div>
+        <div style="display:flex;justify-content:flex-end;margin:-6px 0 10px;">
+          <button class="ctrl-btn" onclick="refreshAdminData()">🔄 Refresh</button>
+        </div>
         <div class="tbl-wrap">
           <table id="ltbl">
             <thead><tr><th>Timestamp</th><th>Email</th><th>Learner Name</th><th>Cohort Code</th><th>Pillar</th><th>Profile</th><th>Task Completion</th><th>Best Performed On</th><th>Career-Builder Workshop</th><th>1:1 Coaching Session</th></tr></thead>
@@ -1435,10 +1438,28 @@ function goHome() {
 
 
 // ── LEARNER DATA STORE ────────────────────────
+// Local, in-memory, and mirrored to the Worker's KV store (if configured) so
+// the admin dashboard can show everyone who has used the app, not only
+// activity from the current browser tab.
 var learnerData = [];
+
+function msId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+// Fire-and-forget: never blocks the UI, and silently no-ops if the Worker
+// or its KV binding isn't set up yet — local tracking still works either way.
+function trackSync(entry) {
+  if (!aiConfigured()) return;
+  var sep = aiEndpoint().indexOf('?') === -1 ? '?' : '&';
+  fetch(aiEndpoint() + sep + 'track=1', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entry)
+  }).catch(function() {});
+}
 
 function saveLearnerActivity(email, name, task) {
   var entry = {
+    id: msId(),
     timestamp: (function(){ var d = new Date(); return d.toLocaleString('en-SG', {timeZone:'Asia/Singapore', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false}) + ' SGT (UTC+8)'; })(),
     email: email,
     name: name,
@@ -1454,6 +1475,7 @@ function saveLearnerActivity(email, name, task) {
   };
   learnerData.push(entry);
   refreshTrackingTable();
+  trackSync(entry);
 }
 
 // Records the checkpoint answers against the learner's most recent activity
@@ -1464,6 +1486,7 @@ function updateLearnerCoachStatus(email, careerBuilder, coachingSession) {
     if (learnerData[i].email === email && learnerData[i].task === 'Portfolio Support') {
       learnerData[i].workshop = careerBuilder;
       learnerData[i].coaching = coachingSession;
+      trackSync({ id: learnerData[i].id, workshop: careerBuilder, coaching: coachingSession });
       break;
     }
   }
@@ -1558,12 +1581,82 @@ setTimeout(showNextMsg, 600);
 
 // ── USAGE PANEL ───────────────────────────────
 var chartInst = null;
+// Admin-only gate on the Learner Activity Report. Real protection is the
+// ADMIN_PIN secret checked server-side by the Worker (see handleTrack in
+// worker.js) — this local fallback PIN only covers the case where the
+// Worker or its KV binding isn't configured yet, so setup isn't blocked on
+// itself. Change it in this file if you want a different local fallback.
+var LOCAL_ADMIN_PIN = 'EDUCLAAS2026';
+var adminUnlocked = false;
+var adminPin = '';
+
 function toggleUsage() {
+  var b = document.getElementById('ubody');
+  if (!b.classList.contains('open') && !adminUnlocked) {
+    var pin = prompt('Admin access only. Enter the dashboard PIN:');
+    if (pin === null) return;
+    unlockAdmin(pin);
+    return;
+  }
+  openUsagePanel();
+}
+
+function openUsagePanel() {
   var b = document.getElementById('ubody');
   var a = document.getElementById('uarrow');
   var open = b.classList.toggle('open');
   a.classList.toggle('open', open);
   if (open && !chartInst) buildChart('month');
+}
+
+function unlockAdmin(pin) {
+  if (!aiConfigured()) {
+    if (pin === LOCAL_ADMIN_PIN) { adminUnlocked = true; openUsagePanel(); }
+    else alert('Incorrect PIN.');
+    return;
+  }
+  fetch(aiEndpoint() + '?track=1&pin=' + encodeURIComponent(pin))
+    .then(function(res) { return res.json().then(function(d) { return { status: res.status, data: d }; }); })
+    .then(function(r) {
+      if (r.status === 200 && r.data && r.data.entries) {
+        adminUnlocked = true;
+        adminPin = pin;
+        mergeRemoteEntries(r.data.entries);
+        openUsagePanel();
+      } else if (r.status === 401) {
+        alert('Incorrect PIN.');
+      } else if (pin === LOCAL_ADMIN_PIN) {
+        // Backend not fully configured (no KV / ADMIN_PIN secret yet) —
+        // fall back to local-only so setup isn't blocked on itself.
+        adminUnlocked = true;
+        openUsagePanel();
+        alert('Note: the shared tracking backend is not fully set up yet (' + (r.data && r.data.error ? r.data.error : 'unknown reason') + '). Showing this session\'s local activity only.');
+      } else {
+        alert('Incorrect PIN.');
+      }
+    })
+    .catch(function() {
+      if (pin === LOCAL_ADMIN_PIN) { adminUnlocked = true; openUsagePanel(); }
+      else alert('Could not reach the tracking backend, and that is not the local fallback PIN.');
+    });
+}
+
+// Merges the Worker's shared KV data with anything local-only (e.g. an entry
+// made just before this fetch), remote data winning on id conflicts.
+function mergeRemoteEntries(remote) {
+  var remoteIds = {};
+  remote.forEach(function(e) { remoteIds[e.id] = true; });
+  var localOnly = learnerData.filter(function(e) { return e.id && !remoteIds[e.id]; });
+  learnerData = remote.concat(localOnly);
+  refreshTrackingTable();
+}
+
+function refreshAdminData() {
+  if (!adminUnlocked || !adminPin || !aiConfigured()) return;
+  fetch(aiEndpoint() + '?track=1&pin=' + encodeURIComponent(adminPin))
+    .then(function(res) { return res.json(); })
+    .then(function(d) { if (d && d.entries) mergeRemoteEntries(d.entries); })
+    .catch(function() {});
 }
 
 // ── FILTER TABLE ──────────────────────────────
@@ -2279,7 +2372,7 @@ var MS_AI_ENDPOINT = 'https://mentorsync-ai.anushaateduclass.workers.dev';
 
 // Long submissions take far longer than a chat reply. A single ceiling was
 // aborting document feedback before the model finished.
-var AI_TIMEOUT_MS = 45000;
+var AI_TIMEOUT_MS = 15000;
 var AI_TIMEOUT_LONG_MS = 120000;
 
 // Tolerates the URL being pasted without a scheme or with a trailing slash —
@@ -2915,7 +3008,7 @@ function pfOffline(s, said) {
         ? 'No fixed target role yet — the following steps will lead with your project evidence instead.\n'
         : '') +
       '\nEvery following section will be written for this reader.\n\nNOTES:\n• Keep this in mind at each step — if a line does not serve this reader, cut it.',
-    about: 'DRAFT:\nI am a [role] working in [field], focused on [the specific thing you do].\n\nI have [X years / the length of your programme] of experience with [your two or three strongest tools or methods], and my recent work covers [project area].\n\nI am currently looking for [role or opportunity] where I can [the value you bring].\n\nNOTES:\n• Replace every bracket with something specific — vague beats nothing, specific beats vague.\n• Lead with capability, not with coursework.\n• Three to four sentences is the right length. Cut anything beyond that.',
+    about: 'DRAFT:\n• [Role] in [field], focused on [the specific thing you do]\n• [X years / the length of your programme] with [your two or three strongest tools or methods]\n• Recent work: [project area]\n• Looking for: [role or opportunity] where I can [the value you bring]\n\nNOTES:\n• Replace every bracket with something specific — vague beats nothing, specific beats vague.\n• Lead with capability, not with coursework.',
     skills: 'DRAFT:\nTechnical\n• [Tool or language] — [proficient / working knowledge]\n• [Tool or language] — [level]\n• [Tool or language] — [level]\n\nProfessional\n• [Skill you can evidence in a project below]\n• [Skill you can evidence in a project below]\n\nNOTES:\n• Only list a soft skill if a project below proves it.\n• Order technical skills by how central they are to the roles you want.',
     projects: 'DRAFT:\n[Project Title]\nApplied Project | [Capability Area]\n\nBusiness Challenge\n[The realistic business problem, customer need or opportunity this addressed, in about 50 words]\n\nProject Objective\n• [Objective 1]\n• [Objective 2]\n\nWhat I Did\n• [Action-oriented bullet — Analysed / Designed / Built / Developed / Automated / Integrated / Tested / Visualised / Evaluated / Recommended]\n• [Bullet]\n• [Bullet]\n\nSolution Created\n[What you actually produced — dashboard, model, campaign, workflow, agent, analysis or recommendation]\n\nTools & Methods\n[Technologies, platforms and methodologies actually used]\n\nKey Insights / Outcomes\n• [Finding or demonstrated result]\n• [Recommendation or potential business value]\n\nEvidence of Work\n• [Artefact — screenshot, workflow, campaign flow, visualisation, model result, prototype]\n\nCapabilities Demonstrated\n• [Capability 1] • [Capability 2] • [Capability 3] • [Capability 4]\n\nHow I Would Explain This Project in an Interview\n[A natural 45-60 second explanation: problem → what I did → tools → what I created/found → why it matters]\n\nNOTES:\n• This is applied project experience, not "just an assignment" — write it that way. Say "As part of an applied [field] project, I built..." not "For my course assignment, I had to...".\n• Never state a result you did not actually get — keep potential business value clearly separate from demonstrated results.\n• Course and capstone projects count as real evidence — you do not need paid work experience to have a strong case study here.\n• Add a link to the live thing, repo, deck or document wherever you can — a described project is a claim, a linked one is evidence.',
     certs: 'DRAFT:\n• [Credential name] — [issuing body], [month year]\n• [Credential name] — [issuing body], [month year]\n\nNOTES:\n• Full names, no abbreviations a reader outside your field would not know.\n• Add a verification link where the issuer provides one.\n• Newest first.',

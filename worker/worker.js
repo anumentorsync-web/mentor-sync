@@ -29,7 +29,7 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
 // Bumped whenever this file changes. Reported by ?selftest=1 so a stale
 // deploy is visible instead of being mistaken for a broken key.
-const WORKER_VERSION = '2026-08-19-b';
+const WORKER_VERSION = '2026-08-19-c';
 
 // Fallbacks used only if the model list itself cannot be fetched.
 const GEMINI_FALLBACKS = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-pro-latest'];
@@ -198,12 +198,13 @@ const PORTFOLIO_STEP_SYSTEM = [
   'OUTPUT FORMAT — reply with ONLY the tags below, nothing before or after. No markdown headers, no emoji, no preamble.',
   '',
   'DRAFT:',
-  '<the finished text for this section, written in their voice, first person where natural. Use plain line breaks between items. If the step needs a list (skills, projects, certifications), give the list itself, formatted and ready to use.>',
+  '<the finished text for this section, written in their voice, first person where natural. SHORT — bullets and short lines, not paragraphs. A sentence longer than 20 words should almost always become two bullets instead. If the step needs a list (skills, projects, certifications), give the list itself, formatted and ready to use.>',
   '',
   'NOTES:',
-  '• <2-4 short bullets: what you assumed, what they should swap in, and the single thing that would most strengthen this section>',
+  '• <2-3 short bullets, each under 15 words: what you assumed, what they should swap in, and the single thing that would most strengthen this section>',
   '',
   'RULES:',
+  '- Length discipline matters as much as content: this is read on a phone. Prefer 4-8 short bullets over 2 long paragraphs. Cut any sentence that restates the previous one.',
   '- Write for the field and seniority they describe. A ten-year data scientist and a first-year Business IT learner get materially different drafts.',
   '- Anyone may use this — learner, lecturer, mentor, working professional. Never assume they are a student unless they say so.',
   '- The user message may include a COACHING STATUS line. If it says they have attended an EduClaas career-builder workshop and/or a 1:1 coaching session with target roles stated, write every section directly toward those roles. If it says they have not, do not invent or assume a target role — lead with the business problem they solved, what they built, and the outcome, and let that evidence speak for itself rather than pitching a role.',
@@ -218,10 +219,10 @@ const PORTFOLIO_STEP_SYSTEM = [
 
 const MODES = {
   feedback: { system: FEEDBACK_SYSTEM, maxTokens: 4000 },
-  feedback_qa: { system: FEEDBACK_QA_SYSTEM, maxTokens: 2000 },
-  portfolio: { system: PORTFOLIO_SYSTEM, maxTokens: 2000 },
-  portfolio_review: { system: PORTFOLIO_REVIEW_SYSTEM, maxTokens: 3000 },
-  portfolio_step: { system: PORTFOLIO_STEP_SYSTEM, maxTokens: 2500 },
+  feedback_qa: { system: FEEDBACK_QA_SYSTEM, maxTokens: 1200 },
+  portfolio: { system: PORTFOLIO_SYSTEM, maxTokens: 1000 },
+  portfolio_review: { system: PORTFOLIO_REVIEW_SYSTEM, maxTokens: 2000 },
+  portfolio_step: { system: PORTFOLIO_STEP_SYSTEM, maxTokens: 1000 },
 };
 
 function corsHeaders(origin) {
@@ -281,9 +282,10 @@ function geminiBody(mode, messages, variant) {
     };
   } else if (variant === 2) {
     // No thinking control at all. Reasoning shares the output budget, so it
-    // is tripled to leave room for an actual answer on long submissions.
+    // is doubled to leave room for an actual answer without ballooning
+    // latency on a model that is already the slowest fallback path.
     body.generationConfig = {
-      maxOutputTokens: config.maxTokens * 3,
+      maxOutputTokens: config.maxTokens * 2,
       temperature: 0.3,
     };
   }
@@ -319,13 +321,18 @@ async function readGeminiAttempt(res) {
            usable: res.ok && !!text };
 }
 
+// Each attempt is a real sequential network round-trip, so the ladder is
+// capped at 2 alternates (not all GEMINI_VARIANTS-1) to bound worst-case
+// latency — a slow fallback path that eventually works is still too slow
+// for a guided flow the learner is waiting on.
 async function postGeminiAdaptive(env, model, mode, messages) {
   let attempt = await readGeminiAttempt(
     await postGemini(env, model, mode, messages, geminiVariant));
   if (attempt.usable || attempt.res.status === 404) return attempt;
 
-  for (let v = 0; v < GEMINI_VARIANTS; v++) {
-    if (v === geminiVariant) continue;
+  const alternates = [3, 2, 1, 0].filter(function (v) { return v !== geminiVariant; }).slice(0, 2);
+  for (let i = 0; i < alternates.length; i++) {
+    const v = alternates[i];
     const next = await readGeminiAttempt(
       await postGemini(env, model, mode, messages, v));
     if (next.res.status === 404) return next;
@@ -479,6 +486,65 @@ function errorReason(raw, status) {
   return 'HTTP ' + status;
 }
 
+// Learner activity tracking — a real, cross-device store so the admin
+// dashboard shows everyone who has used the app, not just the current
+// browser tab. Needs a KV namespace bound as MS_TRACK and an ADMIN_PIN
+// secret set on this Worker; until both exist the page falls back to
+// showing only the current session's local activity.
+const TRACK_KEY = 'entries';
+const TRACK_MAX = 1000;
+
+async function loadTrackEntries(env) {
+  const raw = await env.MS_TRACK.get(TRACK_KEY);
+  if (!raw) return [];
+  try { return JSON.parse(raw); } catch (e) { return []; }
+}
+
+async function saveTrackEntries(env, entries) {
+  if (entries.length > TRACK_MAX) entries = entries.slice(entries.length - TRACK_MAX);
+  await env.MS_TRACK.put(TRACK_KEY, JSON.stringify(entries));
+}
+
+// Upserts by client-generated id so a later update (e.g. the coaching
+// checkpoint answered after intake) merges into the same row instead of
+// appending a duplicate.
+async function upsertTrackEntry(env, data) {
+  const entries = await loadTrackEntries(env);
+  const idx = entries.findIndex(function (e) { return e.id === data.id; });
+  if (idx === -1) entries.push(data);
+  else entries[idx] = Object.assign({}, entries[idx], data);
+  await saveTrackEntries(env, entries);
+}
+
+async function handleTrack(request, env, origin, query) {
+  if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+    return json({ error: 'Origin not allowed.' }, 403, origin);
+  }
+  if (!env.MS_TRACK) {
+    return json({ error: 'MS_TRACK KV binding is not configured on this Worker. Add a KV namespace binding named MS_TRACK under Settings > Bindings.' }, 500, origin);
+  }
+  if (request.method === 'GET') {
+    if (!env.ADMIN_PIN) {
+      return json({ error: 'No ADMIN_PIN secret is set on this Worker. Add one under Settings > Variables and Secrets.' }, 500, origin);
+    }
+    if (query.get('pin') !== env.ADMIN_PIN) {
+      return json({ error: 'Incorrect PIN.' }, 401, origin);
+    }
+    const entries = await loadTrackEntries(env);
+    return json({ entries: entries.slice().reverse() }, 200, origin);
+  }
+  if (request.method === 'POST') {
+    let data;
+    try { data = await request.json(); } catch (e) {
+      return json({ error: 'Body must be JSON.' }, 400, origin);
+    }
+    if (!data || !data.id) return json({ error: 'Missing id.' }, 400, origin);
+    await upsertTrackEntry(env, data);
+    return json({ ok: true }, 200, origin);
+  }
+  return json({ error: 'Use GET (with ?pin=) or POST for tracking.' }, 405, origin);
+}
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
@@ -501,6 +567,9 @@ export default {
     }
     if (query.has('selftest')) {
       return selfTest(env, origin);
+    }
+    if (query.has('track')) {
+      return handleTrack(request, env, origin, query);
     }
     if (request.method !== 'POST') {
       return json({ error: 'Use POST. Add ?selftest=1 to this URL to check whether the API key works.' }, 405, origin);
