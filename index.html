@@ -3006,22 +3006,32 @@ async function pfGenerate() {
 
 // Offline: a fill-in-the-blank template per step. Less tailored than the AI
 // draft, but still something the person can paste and edit.
+// A handful of words or under ~15 characters is a smoke-test answer, not
+// real content — no formatter, local or AI, can turn "skillss" into a
+// skills section. Flag it plainly instead of dressing it up as a finished
+// draft, so a quick test doesn't read as the feature being broken.
+function pfTooThin(said, bits) {
+  return !said || said.trim().length < 15 || bits.length < 1;
+}
+
 function pfOffline(s, said) {
   var who = pfProfile || said || '[your field]';
   var bits = splitBits(said);
+  var thin = pfTooThin(said, bits);
   var bullets = bits.length ? bits.map(function(b) { return '• ' + b; }).join('\n') : '• [You did not add anything here yet — go back and fill this in]';
+  var thinNote = thin ? '\n\n⚠ That is very short for this section — this is a placeholder shaped from what you gave me, not a finished draft. Go back and write 1-2 real sentences, then regenerate.' : '';
   var T = {
     profile: 'DRAFT:\nAngle set: ' + who + '\n' + (pfCoachedAny()
       ? 'You have been through EduClaas coaching/workshop — later sections will write toward the roles you mentioned above.\n'
       : pfCoachedAnswered()
         ? 'No fixed target role yet — the following steps will lead with your project evidence instead.\n'
         : '') +
-      '\nEvery following section will be written for this reader.\n\nNOTES:\n• Keep this in mind at each step — if a line does not serve this reader, cut it.',
-    about: 'DRAFT:\n' + bullets + '\n\nNOTES:\n• This is your own wording, lightly split into lines — tighten anything that reads long.\n• Lead with capability, not with coursework.',
-    skills: 'DRAFT:\n' + bullets + '\n\nNOTES:\n• Split these into Technical and Soft/Professional groups when you publish.\n• Order technical skills by how central they are to the roles you want.',
-    projects: 'DRAFT:\n' + (bits[0] || 'Applied Project') + '\nApplied Project | ' + who + '\n\n' + bullets + '\n\nNOTES:\n• Reshape the lines above into Business Challenge / What I Did / Solution Created / Tools / Outcome — see "What goes in this section" above for the full structure.\n• This is applied project experience — write it that way, not as "just an assignment".\n• Add a link to the live thing, repo, deck or document — a described project is a claim, a linked one is evidence.',
-    certs: 'DRAFT:\n' + bullets + '\n\nNOTES:\n• Full names, no abbreviations a reader outside your field would not know.\n• Add a verification link where the issuer provides one.\n• Newest first.',
-    contact: 'DRAFT:\n' + bullets + '\n\nNOTES:\n• Put this where it is visible without scrolling, and again at the foot of the page.\n• Make sure your LinkedIn headline says the same thing this portfolio says.'
+      '\nEvery following section will be written for this reader.\n\nNOTES:\n• Keep this in mind at each step — if a line does not serve this reader, cut it.' + thinNote,
+    about: 'DRAFT:\n' + bullets + thinNote + '\n\nNOTES:\n• This is your own wording, lightly split into lines — tighten anything that reads long.\n• Lead with capability, not with coursework.',
+    skills: 'DRAFT:\n' + bullets + thinNote + '\n\nNOTES:\n• Split these into Technical and Soft/Professional groups when you publish.\n• Order technical skills by how central they are to the roles you want.',
+    projects: 'DRAFT:\n' + (bits[0] || 'Applied Project') + '\nApplied Project | ' + who + '\n\n' + bullets + thinNote + '\n\nNOTES:\n• Reshape the lines above into Business Challenge / What I Did / Solution Created / Tools / Outcome — see "What goes in this section" above for the full structure.\n• This is applied project experience — write it that way, not as "just an assignment".\n• Add a link to the live thing, repo, deck or document — a described project is a claim, a linked one is evidence.',
+    certs: 'DRAFT:\n' + bullets + thinNote + '\n\nNOTES:\n• Full names, no abbreviations a reader outside your field would not know.\n• Add a verification link where the issuer provides one.\n• Newest first.',
+    contact: 'DRAFT:\n' + bullets + thinNote + '\n\nNOTES:\n• Put this where it is visible without scrolling, and again at the foot of the page.\n• Make sure your LinkedIn headline says the same thing this portfolio says.'
   };
   return T[s.id] || 'DRAFT:\n[Content for ' + s.title + ']';
 }
