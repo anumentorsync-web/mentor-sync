@@ -29,7 +29,7 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
 // Bumped whenever this file changes. Reported by ?selftest=1 so a stale
 // deploy is visible instead of being mistaken for a broken key.
-const WORKER_VERSION = '2026-08-19-c';
+const WORKER_VERSION = '2026-08-19-d';
 
 // Fallbacks used only if the model list itself cannot be fetched.
 const GEMINI_FALLBACKS = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-pro-latest'];
@@ -545,6 +545,43 @@ async function handleTrack(request, env, origin, query) {
   return json({ error: 'Use GET (with ?pin=) or POST for tracking.' }, 405, origin);
 }
 
+// Relays an assignment reminder to the org's Power Automate flow, which is
+// the piece that actually knows how to post into a specific learner's
+// individual Teams chat. The flow's HTTP-trigger URL is kept server-side as
+// TEAMS_WEBHOOK_URL so it never reaches the browser.
+async function handleRemind(request, env, origin) {
+  if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+    return json({ error: 'Origin not allowed.' }, 403, origin);
+  }
+  if (request.method !== 'POST') {
+    return json({ error: 'Use POST.' }, 405, origin);
+  }
+  if (!env.TEAMS_WEBHOOK_URL) {
+    return json({ ok: false, error: 'No TEAMS_WEBHOOK_URL secret is set on this Worker yet. Add one under Settings > Variables and Secrets once the Power Automate flow is built — see the setup note on the Reminders page.' }, 200, origin);
+  }
+  let data;
+  try { data = await request.json(); } catch (e) {
+    return json({ error: 'Body must be JSON.' }, 400, origin);
+  }
+  if (!data || !data.name || !data.email) {
+    return json({ ok: false, error: 'Missing learner name or email.' }, 200, origin);
+  }
+  try {
+    const res = await fetch(env.TEAMS_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const raw = await res.text();
+      return json({ ok: false, error: 'The Teams flow rejected the request: HTTP ' + res.status + (raw ? ' — ' + raw.slice(0, 200) : '') }, 200, origin);
+    }
+    return json({ ok: true }, 200, origin);
+  } catch (e) {
+    return json({ ok: false, error: 'Could not reach the Teams flow: ' + e.message }, 200, origin);
+  }
+}
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
@@ -570,6 +607,9 @@ export default {
     }
     if (query.has('track')) {
       return handleTrack(request, env, origin, query);
+    }
+    if (query.has('remind')) {
+      return handleRemind(request, env, origin);
     }
     if (request.method !== 'POST') {
       return json({ error: 'Use POST. Add ?selftest=1 to this URL to check whether the API key works.' }, 405, origin);

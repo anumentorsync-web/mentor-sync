@@ -1214,18 +1214,19 @@ footer span { color: #fff; font-weight: 600; }
   <div class="pv-body">
     <div class="info-box">
       <div class="info-box-title">🔔 What this feature does</div>
-      <p>Keeps learners ahead of their deadlines. Look up a learner, see every assignment due, and push a reminder straight to their chat — no manual chasing.</p>
+      <p>Keeps learners ahead of their deadlines. Look up a learner, see every assignment due, and push a reminder straight into their own individual Teams chat — no manual chasing.</p>
       <ul>
-        <li><b>Enter</b> the learner's name and cohort code.</li>
+        <li><b>Enter</b> the learner's name, Teams email, and cohort code.</li>
         <li><b>Review</b> their upcoming deadlines before anything is sent.</li>
-        <li><b>Send</b> — the reminder is delivered to that learner personally.</li>
+        <li><b>Send</b> — posted into that learner's own 1:1 Teams chat, not a channel.</li>
       </ul>
-      <span class="info-note">🔗 Demo with sample data. Going live needs the <b>Microsoft Teams workflow bot</b> connected; once it is, "Send Reminder" posts the message into the learner's individual Teams chat automatically.</span>
+      <span class="info-note">🔗 Assignment dates are sample data. Delivery is real once a <b>Power Automate flow</b> is connected on the org's Microsoft 365 side — see the setup note your admin needs, further down this page.</span>
     </div>
 
     <!-- STEP 1: LOOKUP -->
     <div id="r-lookup">
       <div class="form-grp"><label>Learner's Name</label><input type="text" id="r-name" placeholder="e.g. Chee Tai Wai"></div>
+      <div class="form-grp"><label>Learner's Teams Email</label><input type="text" inputmode="email" autocapitalize="off" id="r-email" placeholder="chee.taiwai@educlaas.com"></div>
       <div class="form-grp"><label>Cohort Code</label><input type="text" id="r-cohort" placeholder="MDM-MDM_E_M1-0126"></div>
       <button class="sub-btn" onclick="fetchReminderTimeline()">Fetch Assignment Timeline →</button>
     </div>
@@ -1241,6 +1242,17 @@ footer span { color: #fff; font-weight: 600; }
     </div>
 
     <div class="success-msg" id="r-success"><span id="r-success-txt">✅ Reminder sent!</span></div>
+
+    <div class="info-box" style="margin-top:20px;">
+      <div class="info-box-title">⚙️ For the org admin — one-time setup</div>
+      <p>The app is ready to deliver; it just needs a Power Automate flow to hand the message to Teams. Build an <b>Instant Cloud Flow</b> in Power Automate:</p>
+      <ul>
+        <li><b>Trigger:</b> "When an HTTP request is received" — request body will be JSON: <code>{name, email, cohort, course, items}</code>.</li>
+        <li><b>Action:</b> "Post message in a chat or channel" (Teams connector) → Post as: Flow bot → Post in: Chat with a user → Recipient: the <code>email</code> field from the trigger → Message: build it from <code>name</code>, <code>course</code>, and <code>items</code>.</li>
+        <li><b>Copy</b> the flow's HTTP POST URL, then add it to the Cloudflare Worker as a secret named <code>TEAMS_WEBHOOK_URL</code>.</li>
+      </ul>
+      <span class="info-note">Once that secret is set, "Send Reminder" delivers for real — no further app changes needed.</span>
+    </div>
   </div>
 </div>
 
@@ -3119,11 +3131,12 @@ var currentReminderPlan = null;
 
 function fetchReminderTimeline() {
   var name = document.getElementById('r-name').value.trim();
+  var email = document.getElementById('r-email').value.trim();
   var cohort = document.getElementById('r-cohort').value.trim();
-  if (!name || !cohort) { alert('Please enter both the learner\'s name and cohort code.'); return; }
+  if (!name || !email || !cohort) { alert('Please enter the learner\'s name, Teams email, and cohort code.'); return; }
   var key = Object.keys(MOCK_CALENDARS).find(function(k){ return k !== 'DEFAULT' && cohort.toUpperCase().indexOf(k) === 0; }) || 'DEFAULT';
   var plan = MOCK_CALENDARS[key];
-  currentReminderPlan = { name: name, cohort: cohort, course: plan.course, items: plan.items };
+  currentReminderPlan = { name: name, email: email, cohort: cohort, course: plan.course, items: plan.items };
 
   document.getElementById('r-list-title').textContent = plan.course + ' — Upcoming Deadlines for ' + name;
   document.getElementById('r-dl-rows').innerHTML = plan.items.map(function(it) {
@@ -3135,11 +3148,44 @@ function fetchReminderTimeline() {
   document.getElementById('r-success').style.display = 'none';
 }
 
+// Posts straight to the Worker, which relays it to the org's Power Automate
+// flow (kept server-side so the flow's URL is never exposed to the browser).
+// If that flow isn't wired up yet, the Worker says so plainly instead of
+// pretending the message went out.
 function sendReminder() {
   if (!currentReminderPlan) return;
-  document.getElementById('r-review').style.opacity = '0.5';
-  document.getElementById('r-review').style.pointerEvents = 'none';
-  document.getElementById('r-success-txt').textContent = '✅ Preview ready for ' + currentReminderPlan.name + ' (' + currentReminderPlan.cohort + '). Once connected to the Teams workflow bot, this will post automatically into the learner\'s individual Teams chat.';
+  var btn = document.querySelector('#r-review .sub-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+
+  if (!aiConfigured()) {
+    showReminderResult(false, 'No backend is configured on this page (MS_AI_ENDPOINT is empty), so there is nowhere to send this yet.');
+    return;
+  }
+
+  var sep = aiEndpoint().indexOf('?') === -1 ? '?' : '&';
+  fetch(aiEndpoint() + sep + 'remind=1', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(currentReminderPlan)
+  }).then(function(res) {
+    return res.json().then(function(data) { return { status: res.status, data: data }; });
+  }).then(function(r) {
+    if (r.data && r.data.ok) {
+      showReminderResult(true, 'Delivered to ' + currentReminderPlan.name + '\'s individual Teams chat.');
+    } else {
+      showReminderResult(false, (r.data && r.data.error) || ('HTTP ' + r.status + ' — the Teams flow did not confirm delivery.'));
+    }
+  }).catch(function(err) {
+    showReminderResult(false, 'Could not reach the Worker: ' + err.message);
+  });
+}
+
+function showReminderResult(ok, detail) {
+  var btn = document.querySelector('#r-review .sub-btn');
+  if (btn) { btn.disabled = false; btn.textContent = 'Send Reminder to Learner →'; }
+  document.getElementById('r-review').style.opacity = ok ? '0.5' : '1';
+  document.getElementById('r-review').style.pointerEvents = ok ? 'none' : 'auto';
+  document.getElementById('r-success-txt').textContent = (ok ? '✅ Reminder sent — ' : '⚠️ Not sent — ') + detail;
   document.getElementById('r-success').style.display = 'flex';
 }
 
@@ -3150,6 +3196,7 @@ function resetReminderLookup() {
   document.getElementById('r-review').style.pointerEvents = 'auto';
   document.getElementById('r-success').style.display = 'none';
   document.getElementById('r-name').value = '';
+  document.getElementById('r-email').value = '';
   document.getElementById('r-cohort').value = '';
 }
 
