@@ -1242,17 +1242,6 @@ footer span { color: #fff; font-weight: 600; }
     </div>
 
     <div class="success-msg" id="r-success"><span id="r-success-txt">✅ Reminder sent!</span></div>
-
-    <div class="info-box" style="margin-top:20px;">
-      <div class="info-box-title">⚙️ For the org admin — one-time setup</div>
-      <p>The app is ready to deliver; it just needs a Power Automate flow to hand the message to Teams. Build an <b>Instant Cloud Flow</b> in Power Automate:</p>
-      <ul>
-        <li><b>Trigger:</b> "When an HTTP request is received" — request body will be JSON: <code>{name, email, cohort, course, items}</code>.</li>
-        <li><b>Action:</b> "Post message in a chat or channel" (Teams connector) → Post as: Flow bot → Post in: Chat with a user → Recipient: the <code>email</code> field from the trigger → Message: build it from <code>name</code>, <code>course</code>, and <code>items</code>.</li>
-        <li><b>Copy</b> the flow's HTTP POST URL, then add it to the Cloudflare Worker as a secret named <code>TEAMS_WEBHOOK_URL</code>.</li>
-      </ul>
-      <span class="info-note">Once that secret is set, "Send Reminder" delivers for real — no further app changes needed.</span>
-    </div>
   </div>
 </div>
 
