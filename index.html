@@ -1216,7 +1216,7 @@ footer span { color: #fff; font-weight: 600; }
       <div class="info-box-title">🔔 What this feature does</div>
       <p>Keeps learners ahead of their deadlines. Look up a learner, see every assignment due, and push a reminder straight into their own individual Teams chat — no manual chasing.</p>
       <ul>
-        <li><b>Enter</b> the learner's name, Teams email, and cohort code.</li>
+        <li><b>Enter</b> the learner's name, school ID, and cohort code.</li>
         <li><b>Review</b> their upcoming deadlines before anything is sent.</li>
         <li><b>Send</b> — posted into that learner's own 1:1 Teams chat, not a channel.</li>
       </ul>
@@ -1225,7 +1225,7 @@ footer span { color: #fff; font-weight: 600; }
     <!-- STEP 1: LOOKUP -->
     <div id="r-lookup">
       <div class="form-grp"><label>Learner's Name</label><input type="text" id="r-name"></div>
-      <div class="form-grp"><label>Learner's Teams Email</label><input type="text" inputmode="email" autocapitalize="off" id="r-email"></div>
+      <div class="form-grp"><label>Learner's School ID</label><input type="text" inputmode="email" autocapitalize="off" id="r-email"></div>
       <div class="form-grp"><label>Cohort Code</label><input type="text" id="r-cohort"></div>
       <button class="sub-btn" onclick="fetchReminderTimeline()">Fetch Assignment Timeline →</button>
     </div>
@@ -3121,7 +3121,7 @@ function fetchReminderTimeline() {
   var name = document.getElementById('r-name').value.trim();
   var email = document.getElementById('r-email').value.trim();
   var cohort = document.getElementById('r-cohort').value.trim();
-  if (!name || !email || !cohort) { alert('Please enter the learner\'s name, Teams email, and cohort code.'); return; }
+  if (!name || !email || !cohort) { alert('Please enter the learner\'s name, school ID, and cohort code.'); return; }
   var key = Object.keys(MOCK_CALENDARS).find(function(k){ return k !== 'DEFAULT' && cohort.toUpperCase().indexOf(k) === 0; }) || 'DEFAULT';
   var plan = MOCK_CALENDARS[key];
   currentReminderPlan = { name: name, email: email, cohort: cohort, course: plan.course, items: plan.items };
