@@ -1214,18 +1214,24 @@ footer span { color: #fff; font-weight: 600; }
   <div class="pv-body">
     <div class="info-box">
       <div class="info-box-title">🔔 What this feature does</div>
-      <p>Keeps learners ahead of their deadlines. Look up a learner, see every assignment due, and push a reminder straight into their own individual Teams chat — no manual chasing.</p>
+      <p>Keeps a whole cohort ahead of their deadlines in one go. Add your learners, see every assignment due, and push one reminder that reaches each of them individually in Teams — no manual chasing, no sending one by one.</p>
       <ul>
-        <li><b>Enter</b> the learner's name, school ID, and cohort code.</li>
-        <li><b>Review</b> their upcoming deadlines before anything is sent.</li>
-        <li><b>Send</b> — posted into that learner's own 1:1 Teams chat, not a channel.</li>
+        <li><b>Add learners</b> — paste a list or upload a CSV, plus the cohort code.</li>
+        <li><b>Review</b> who's included and the upcoming deadlines before anything is sent.</li>
+        <li><b>Send once</b> — every learner gets their own individual Teams message.</li>
       </ul>
     </div>
 
     <!-- STEP 1: LOOKUP -->
     <div id="r-lookup">
-      <div class="form-grp"><label>Learner's Name</label><input type="text" id="r-name"></div>
-      <div class="form-grp"><label>Learner's School ID</label><input type="text" inputmode="email" autocapitalize="off" id="r-email"></div>
+      <div class="form-grp">
+        <label>Learners — one per line, as "Name, School ID"</label>
+        <textarea id="r-learners" rows="5" placeholder="e.g.&#10;Chee Tai Wai, chee.taiwai@educlaas.com&#10;Joanna Ng, joanna.ng@educlaas.com" style="width:100%;font-size:15px;padding:10px;border:2px solid #C9A84C;border-radius:8px;background:#fff;color:#1B2E6B;font-family:inherit;"></textarea>
+        <div style="margin-top:8px;">
+          <label style="font-size:12.5px;color:var(--muted);display:block;margin-bottom:4px;">Or upload a CSV (columns: name, email — header row optional)</label>
+          <input type="file" accept=".csv,text/csv" id="r-learners-file" onchange="loadLearnersCsv(this)">
+        </div>
+      </div>
       <div class="form-grp"><label>Cohort Code</label><input type="text" id="r-cohort"></div>
       <button class="sub-btn" onclick="fetchReminderTimeline()">Fetch Assignment Timeline →</button>
     </div>
@@ -1233,11 +1239,15 @@ footer span { color: #fff; font-weight: 600; }
     <!-- STEP 2: REVIEW + SEND (hidden until fetched) -->
     <div id="r-review" style="display:none;">
       <div class="dl-list" style="margin-top:0;">
+        <div class="dl-list-title">Learners in this reminder</div>
+        <div id="r-learner-rows"></div>
+      </div>
+      <div class="dl-list" style="margin-top:14px;">
         <div class="dl-list-title" id="r-list-title">Upcoming Assignments</div>
         <div id="r-dl-rows"></div>
       </div>
-      <button class="sub-btn" style="margin-top:14px;" onclick="sendReminder()">Send Reminder to Learner →</button>
-      <button class="dl-btn" style="display:flex;justify-content:center;margin-top:10px;" onclick="resetReminderLookup()">← Look up a different learner</button>
+      <button class="sub-btn" style="margin-top:14px;" onclick="sendReminder()">Send Reminder to Learners →</button>
+      <button class="dl-btn" style="display:flex;justify-content:center;margin-top:10px;" onclick="resetReminderLookup()">← Start over</button>
     </div>
 
     <div class="success-msg" id="r-success"><span id="r-success-txt">✅ Reminder sent!</span></div>
@@ -3117,16 +3127,49 @@ var MOCK_CALENDARS = {
 };
 var currentReminderPlan = null;
 
+// Reads a CSV (with or without a header row) and drops its name/email
+// columns straight into the paste box, so a mentor can use either input
+// method interchangeably without the two getting out of sync.
+function loadLearnersCsv(input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function() {
+    var lines = String(reader.result).split(/\r\n|\n|\r/).map(function(l) { return l.trim(); }).filter(Boolean);
+    if (lines.length && /name/i.test(lines[0]) && /email|id/i.test(lines[0])) lines.shift(); // drop header
+    var pairs = lines.map(function(l) {
+      var bits = l.split(',').map(function(b) { return b.trim(); });
+      return bits.length >= 2 ? bits[0] + ', ' + bits[1] : '';
+    }).filter(Boolean);
+    document.getElementById('r-learners').value = pairs.join('\n');
+  };
+  reader.readAsText(file);
+}
+
+// Parses the "Name, email" per-line box into learner records. Tolerant of
+// blank lines, extra spaces, and a pasted header row.
+function parseLearners(raw) {
+  return raw.split(/\r\n|\n|\r/).map(function(l) { return l.trim(); }).filter(Boolean)
+    .filter(function(l) { return !(/^name\s*,/i.test(l)); })
+    .map(function(l) {
+      var bits = l.split(',');
+      return { name: (bits[0] || '').trim(), email: (bits.slice(1).join(',') || '').trim() };
+    })
+    .filter(function(p) { return p.name && p.email; });
+}
+
 function fetchReminderTimeline() {
-  var name = document.getElementById('r-name').value.trim();
-  var email = document.getElementById('r-email').value.trim();
+  var learners = parseLearners(document.getElementById('r-learners').value);
   var cohort = document.getElementById('r-cohort').value.trim();
-  if (!name || !email || !cohort) { alert('Please enter the learner\'s name, school ID, and cohort code.'); return; }
+  if (!learners.length || !cohort) { alert('Please add at least one learner (Name, School ID) and the cohort code.'); return; }
   var key = Object.keys(MOCK_CALENDARS).find(function(k){ return k !== 'DEFAULT' && cohort.toUpperCase().indexOf(k) === 0; }) || 'DEFAULT';
   var plan = MOCK_CALENDARS[key];
-  currentReminderPlan = { name: name, email: email, cohort: cohort, course: plan.course, items: plan.items };
+  currentReminderPlan = { learners: learners, cohort: cohort, course: plan.course, items: plan.items };
 
-  document.getElementById('r-list-title').textContent = plan.course + ' — Upcoming Deadlines for ' + name;
+  document.getElementById('r-learner-rows').innerHTML = learners.map(function(l) {
+    return '<div class="dl-row"><span class="dl-name">' + escapeHtml(l.name) + '</span><span class="dl-date">' + escapeHtml(l.email) + '</span></div>';
+  }).join('');
+  document.getElementById('r-list-title').textContent = plan.course + ' — Upcoming Deadlines (' + learners.length + ' learner' + (learners.length === 1 ? '' : 's') + ')';
   document.getElementById('r-dl-rows').innerHTML = plan.items.map(function(it) {
     return '<div class="dl-row"><span class="dl-name">' + it.name + '</span><span class="dl-date">Submit by ' + it.date + '</span></div>';
   }).join('');
@@ -3139,15 +3182,17 @@ function fetchReminderTimeline() {
 // Direct API delivery to Teams is blocked by the org's tenant policy
 // (DirectApiAuthorizationRequired), so this opens the Microsoft Form that
 // drives the Power Automate flow instead, with the reminder details shown
-// on-page ready to copy in. One extra click (Submit on the form) instead of
-// a fully silent send, but it actually works within the org's security rules.
+// on-page ready to copy in. The flow (once updated — see docs) loops over
+// the whole "Learners" block and messages each one individually from a
+// single form submission, so this is one send for the whole cohort.
 var MS_REMINDER_FORM_URL = 'https://forms.cloud.microsoft/r/gffn1gH6Za';
 
 function sendReminder() {
   if (!currentReminderPlan) return;
   var p = currentReminderPlan;
   var itemsText = p.items.map(function(it) { return it.name + ' — ' + it.date; }).join('; ');
-  var block = 'Name: ' + p.name + '\nEmail: ' + p.email + '\nCohort: ' + p.cohort +
+  var learnersText = p.learners.map(function(l) { return l.name + ', ' + l.email; }).join('\n');
+  var block = 'Learners:\n' + learnersText + '\n\nCohort: ' + p.cohort +
     '\nCourse: ' + p.course + '\nItems: ' + itemsText;
 
   window.open(MS_REMINDER_FORM_URL, '_blank');
@@ -3175,8 +3220,7 @@ function resetReminderLookup() {
   document.getElementById('r-review').style.opacity = '1';
   document.getElementById('r-review').style.pointerEvents = 'auto';
   document.getElementById('r-success').style.display = 'none';
-  document.getElementById('r-name').value = '';
-  document.getElementById('r-email').value = '';
+  document.getElementById('r-learners').value = '';
   document.getElementById('r-cohort').value = '';
 }
 
