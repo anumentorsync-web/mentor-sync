@@ -3136,45 +3136,37 @@ function fetchReminderTimeline() {
   document.getElementById('r-success').style.display = 'none';
 }
 
-// Posts straight to the Worker, which relays it to the org's Power Automate
-// flow (kept server-side so the flow's URL is never exposed to the browser).
-// If that flow isn't wired up yet, the Worker says so plainly instead of
-// pretending the message went out.
+// Direct API delivery to Teams is blocked by the org's tenant policy
+// (DirectApiAuthorizationRequired), so this opens the Microsoft Form that
+// drives the Power Automate flow instead, with the reminder details shown
+// on-page ready to copy in. One extra click (Submit on the form) instead of
+// a fully silent send, but it actually works within the org's security rules.
+var MS_REMINDER_FORM_URL = 'https://forms.cloud.microsoft/r/gffn1gH6Za';
+
 function sendReminder() {
   if (!currentReminderPlan) return;
-  var btn = document.querySelector('#r-review .sub-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+  var p = currentReminderPlan;
+  var itemsText = p.items.map(function(it) { return it.name + ' — ' + it.date; }).join('; ');
+  var block = 'Name: ' + p.name + '\nEmail: ' + p.email + '\nCohort: ' + p.cohort +
+    '\nCourse: ' + p.course + '\nItems: ' + itemsText;
 
-  if (!aiConfigured()) {
-    showReminderResult(false, 'No backend is configured on this page (MS_AI_ENDPOINT is empty), so there is nowhere to send this yet.');
-    return;
+  window.open(MS_REMINDER_FORM_URL, '_blank');
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(block).catch(function() {});
   }
 
-  var sep = aiEndpoint().indexOf('?') === -1 ? '?' : '&';
-  fetch(aiEndpoint() + sep + 'remind=1', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(currentReminderPlan)
-  }).then(function(res) {
-    return res.json().then(function(data) { return { status: res.status, data: data }; });
-  }).then(function(r) {
-    if (r.data && r.data.ok) {
-      showReminderResult(true, 'Delivered to ' + currentReminderPlan.name + '\'s individual Teams chat.');
-    } else {
-      showReminderResult(false, (r.data && r.data.error) || ('HTTP ' + r.status + ' — the Teams flow did not confirm delivery.'));
-    }
-  }).catch(function(err) {
-    showReminderResult(false, 'Could not reach the Worker: ' + err.message);
-  });
-}
-
-function showReminderResult(ok, detail) {
-  var btn = document.querySelector('#r-review .sub-btn');
-  if (btn) { btn.disabled = false; btn.textContent = 'Send Reminder to Learner →'; }
-  document.getElementById('r-review').style.opacity = ok ? '0.5' : '1';
-  document.getElementById('r-review').style.pointerEvents = ok ? 'none' : 'auto';
-  document.getElementById('r-success-txt').textContent = (ok ? '✅ Reminder sent — ' : '⚠️ Not sent — ') + detail;
-  document.getElementById('r-success').style.display = 'flex';
+  document.getElementById('r-review').style.opacity = '0.5';
+  document.getElementById('r-review').style.pointerEvents = 'none';
+  var successEl = document.getElementById('r-success');
+  successEl.innerHTML =
+    '<div style="width:100%;">' +
+    '<div style="font-weight:700;margin-bottom:8px;">📋 Form opened in a new tab — paste these details in, then click Submit there</div>' +
+    '<div style="background:#fff;border:1.5px solid rgba(27,46,107,0.18);border-radius:8px;padding:10px 12px;font-family:monospace;font-size:12.5px;white-space:pre-wrap;color:#1B2E6B;">' +
+    escapeHtml(block) + '</div>' +
+    '<div style="font-size:11.5px;color:var(--muted);margin-top:6px;">Already copied to your clipboard — just paste (Ctrl/Cmd+V) into the form.</div>' +
+    '</div>';
+  successEl.style.display = 'flex';
 }
 
 function resetReminderLookup() {
